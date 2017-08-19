@@ -5,7 +5,6 @@ from collections import namedtuple
 
 from flask import Flask, render_template, Response
 import cv2
-import imutils
 import numpy as np
 
 from camera import USBCam, PiCamera
@@ -76,18 +75,19 @@ def detect():
     cam = PiCamera()
     generator = cam.frame_generator()
 
+
     # XXX for _ in range(100):
     # XXX     # give the cam a chance to warm up
     # XXX     first_frame = next(generator)
     first_frame = next(generator)
 
-    resized = imutils.resize(first_frame, width=500)
+    resized = cv2.resize(first_frame, (320, 240))
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     reference = cv2.GaussianBlur(gray, (21, 21), 0)
 
     for frame in generator:
         text = 'no motion detected'
-        resized = imutils.resize(frame, width=500)
+        resized = cv2.resize(frame, (320, 240))
         modified = resized.copy()
         current_gray = cv2.cvtColor(modified, cv2.COLOR_BGR2GRAY)
 
