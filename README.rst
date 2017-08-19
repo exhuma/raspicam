@@ -1,7 +1,7 @@
 raspicam
 ========
 
-Bare basics to set up a Raspberry PI 3 with camera support
+Playground for Raspberry Pi motion detection using Python.
 
 
 How to setup
