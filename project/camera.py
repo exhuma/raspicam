@@ -21,13 +21,8 @@ class USBCam(Camera):
         self.video = cv2.VideoCapture(-1)
         if not self.video.isOpened():
             raise Exception('Unable to open camera')
-
         success, image = self.video.read()
-        ret, jpeg = cv2.imencode('.jpg', image)
-        frame = jpeg.tostring()
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
+        yield image
         self.video.release()
 
 
@@ -40,10 +35,5 @@ class PiCamera(Camera):
                 camera.framerate = 32
                 while True:
                     camera.capture(output, 'rgb', use_video_port=True)
-                    ret, jpeg = cv2.imencode('.jpg', output.array)
-                    frame = jpeg.tostring()
-                    response = (
-                        b'--frame\r\n'
-                        b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-                    yield response
+                    yield output.array
                     output.truncate(0)
