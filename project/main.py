@@ -1,7 +1,8 @@
 # main.py
 
-from datetime import datetime
 from collections import namedtuple
+from datetime import datetime
+import logging
 
 from flask import Flask, render_template, Response
 import cv2
@@ -9,6 +10,7 @@ import numpy as np
 
 from camera import USBCam, PiCamera
 
+LOG = logging.getLogger(__name__)
 Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 app = Flask(__name__)
@@ -75,10 +77,10 @@ def detect():
     cam = PiCamera()
     generator = cam.frame_generator()
 
+    LOG.info('Warming up...')
+    for _ in range(100):
+        next(generator)
 
-    # XXX for _ in range(100):
-    # XXX     # give the cam a chance to warm up
-    # XXX     first_frame = next(generator)
     first_frame = next(generator)
 
     resized = cv2.resize(first_frame, (320, 240))
