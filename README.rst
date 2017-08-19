@@ -4,6 +4,11 @@ raspicam
 Playground for Raspberry Pi motion detection using Python.
 
 
+.. figure:: images/example.jpg
+
+   Example output picture.
+
+
 How to setup
 ------------
 
