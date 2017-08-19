@@ -8,11 +8,8 @@ aptitude update
 aptitude -y upgrade
 aptitude install -y \
     build-essential \
-    cheese \
     cmake \
-    fluxbox \
     gfortran \
-    git \
     libatlas-base-dev \
     libavcodec-dev \
     libavformat-dev \
@@ -34,10 +31,13 @@ aptitude install -y \
     pkg-config \
     python3-dev \
     python3-numpy \
-    python3-pip \
+    python3-pip
+
+# Some stuff for development (not really needed for the project)
+aptitude install -y \
+    git \
     tmux \
-    vim-nox \
-    vnc4server
+    vim-nox
 
 cd
 git clone https://github.com/opencv/opencv.git
