@@ -27,19 +27,20 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
            offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
-def combine(original, frame_delta, thresh, modified):
+def combine(reference, frame_delta, dilated, modified):
     # make a canvas big enough for 2x2 images of 320x240 and 10px offset
     width = 320 * 2 + 30
     height = 240 * 2 + 30
     canvas = np.zeros((height, width, 3), np.uint8)
 
+    reference_rgb = cv2.cvtColor(reference, cv2.COLOR_GRAY2RGB)
     delta_rgb = cv2.cvtColor(frame_delta, cv2.COLOR_GRAY2RGB)
-    thresh_rgb = cv2.cvtColor(thresh, cv2.COLOR_GRAY2RGB)
+    dilated_rgb = cv2.cvtColor(dilated, cv2.COLOR_GRAY2RGB)
 
-    blit(canvas, original, Dimension(320, 240), Point2D(10, 10))
+    blit(canvas, reference_rgb, Dimension(320, 240), Point2D(10, 10))
     blit(canvas, modified, Dimension(320, 240), Point2D(320+20, 10))
     blit(canvas, delta_rgb, Dimension(320, 240), Point2D(10, 240+20))
-    blit(canvas, thresh_rgb, Dimension(320, 240), Point2D(320+20, 240+20))
+    blit(canvas, dilated_rgb, Dimension(320, 240), Point2D(320+20, 240+20))
 
     return canvas
 
@@ -107,9 +108,9 @@ def detect():
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         combined = combine(
-            resized,
+            reference,
             frame_delta,
-            thresh,
+            dilated,
             modified
         )
 
