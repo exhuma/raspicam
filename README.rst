@@ -30,17 +30,17 @@ bootstrap script is not yet properly adapted to that.
         sudo aptitude install git
         git clone https://github.com/exhuma/raspicam
 
-5. Run the bootstrap script::
+5. Run the bootstrap script:
 
    .. note::
 
         This step will easily take over an hour to finish but *should* be
         automated!
 
-    ::
+   ::
 
-        cd raspicam
-        sudo bash bootstrap.bash
+       cd raspicam
+       sudo bash bootstrap.bash
 
 6. Run the application::
 
