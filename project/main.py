@@ -85,7 +85,7 @@ def detect():
     reference = cv2.GaussianBlur(gray, (21, 21), 0)
 
     for frame in generator:
-        text = 'unoccupied'
+        text = 'no motion detected'
         resized = imutils.resize(frame, width=500)
         modified = resized.copy()
         current_gray = cv2.cvtColor(modified, cv2.COLOR_BGR2GRAY)
@@ -98,11 +98,13 @@ def detect():
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
 
-        for contour in contours:
-            # if cv2.contourArea(contour) < MIN_AREA:
-            #     continue
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        if len(contours) > 1:  # first contour is always the complete image
+            text = 'motion detected'
+            for contour in contours[1:]:
+                # if cv2.contourArea(contour) < MIN_AREA:
+                #     continue
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
         combined = combine(
             resized,
