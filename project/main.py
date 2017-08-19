@@ -44,6 +44,33 @@ def combine(original, frame_delta, thresh, modified):
     return canvas
 
 
+def add_text(image, header, footer):
+    height, width, channels = image.shape
+
+    title_offset = 20
+    new_height = height + (2 * title_offset)
+    canvas = np.zeros((new_height, width, channels), np.uint8)
+
+    blit(canvas, image, Dimension(width, height), Point2D(0, title_offset))
+
+    cv2.putText(canvas,
+                header,
+                (10, 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 0, 255),
+                2)
+    cv2.putText(canvas,
+                footer,
+                (10, canvas.shape[0] - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (0, 0, 255),
+                1)
+
+    return canvas
+
+
 def detect():
     cam = PiCamera()
     generator = cam.frame_generator()
@@ -77,21 +104,6 @@ def detect():
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-        cv2.putText(modified,
-                    "Room Status: {}".format(text),
-                    (10, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (0, 0, 255),
-                    2)
-        cv2.putText(modified,
-                    datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
-                    (10, modified.shape[0] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.35,
-                    (0, 0, 255),
-                    1)
-
         combined = combine(
             resized,
             frame_delta,
@@ -99,7 +111,11 @@ def detect():
             modified
         )
 
-        ret, jpeg = cv2.imencode('.jpg', combined)
+        with_text = add_text(combined,
+                             "Status: {}".format(text),
+                             datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"))
+
+        ret, jpeg = cv2.imencode('.jpg', with_text)
         output = jpeg.tostring()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + output + b'\r\n\r\n')
