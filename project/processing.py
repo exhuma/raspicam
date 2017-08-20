@@ -15,6 +15,18 @@ Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 
 
+def as_jpeg(image):
+    """
+    Takes a OpenCV image and converts it to a JPEG image
+    
+    :param image:  The OpenCV image
+    :return: a bytes object
+    """
+    ret, jpeg = cv2.imencode('.jpg', image)
+    output = jpeg.tostring()
+    return output
+
+
 def blit(canvas, image, size: Dimension, offset: Point2D):
     """
     Resizes an image and copies the resized result onto a canvas at position *offset* with size *size*.
@@ -98,6 +110,17 @@ def add_text(image, header, footer):
     return canvas
 
 
+def warmup(frame_generator, iterations=100):
+    LOG.info('Warming up...')
+    for i in range(1, iterations+1):
+        image = next(frame_generator)
+        with_text = add_text(
+            image,
+            'Warming up... [%d/%d]' % (i, iterations),
+            'settling cam...')
+        yield as_jpeg(with_text)
+
+
 def detect():
     """
     Run motion detection.
@@ -109,9 +132,8 @@ def detect():
     cam = PiCamera()
     generator = cam.frame_generator()
 
-    LOG.info('Warming up...')
-    for _ in range(100):
-        next(generator)
+    for frame in warmup(generator):
+        yield frame
 
     first_frame = next(generator)
 
@@ -152,8 +174,6 @@ def detect():
                              "Status: {}".format(text),
                              datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"))
 
-        ret, jpeg = cv2.imencode('.jpg', with_text)
-        output = jpeg.tostring()
-        yield output
+        yield as_jpeg(with_text)
 
 
