@@ -1,3 +1,7 @@
+"""
+This module contains various functions which process image objects.
+"""
+
 import logging
 from collections import namedtuple
 from datetime import datetime
@@ -13,13 +17,31 @@ Dimension = namedtuple('Dimension', 'width height')
 
 def blit(canvas, image, size: Dimension, offset: Point2D):
     """
-    Blits an image onto a canvas at position *offset* with size *size*.
+    Resizes an image and copies the resized result onto a canvas at position *offset* with size *size*.
+    
+    NOTE: The image in *canvas* will be modified in-place!
+    
+    Example::
+    
+        >>> canvas = np.zeros((100, 100, 3), np.uint8)
+        >>> block = np.ones((100, 100, 3), np.uint8)
+        >>> blit(canvas, block, Dimension(20, 20), Point2D(10, 10))
     """
     canvas[offset.y:size.height+offset.y,
     offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
 def combine(reference, frame_delta, dilated, modified):
+    """
+    Tile 4 images onto one big canvas.
+    
+    :param reference: The first image
+    :param frame_delta: The second image
+    :param dilated: The third image
+    :param modified: The fourth image
+    :return: A new canvas with those 4 images tiled
+    """
+
     # make a canvas big enough for 2x2 images of 320x240 and 10px offset
     width = 320 * 2 + 30
     height = 240 * 2 + 30
@@ -38,6 +60,18 @@ def combine(reference, frame_delta, dilated, modified):
 
 
 def add_text(image, header, footer):
+    """
+    Add a header and footer to an image.
+    
+    Example::
+    
+        >>> new_image = add_text(old_image, 'Hello', 'world!')
+        
+    :param image: The original image
+    :param header:  The header text
+    :param footer:  The footer text
+    :return: A new image with header and footer added
+    """
     height, width, channels = image.shape
 
     title_offset = 20
@@ -65,6 +99,13 @@ def add_text(image, header, footer):
 
 
 def detect():
+    """
+    Run motion detection.
+    
+    This will open the Raspberry PI camera and return a stream of JPEG images as bytes objects.
+    
+    :return: A stream of bytes objects
+    """
     cam = PiCamera()
     generator = cam.frame_generator()
 
