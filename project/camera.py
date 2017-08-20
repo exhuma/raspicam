@@ -18,12 +18,13 @@ class Camera(metaclass=ABCMeta):
 class USBCam(Camera):
 
     def frame_generator(self):
-        self.video = cv2.VideoCapture(-1)
-        if not self.video.isOpened():
+        video = cv2.VideoCapture(-1)
+        if not video.isOpened():
             raise Exception('Unable to open camera')
-        success, image = self.video.read()
-        yield image
-        self.video.release()
+        while True:
+            success, image = video.read()
+            yield image
+        video.release()
 
 
 class PiCamera(Camera):
