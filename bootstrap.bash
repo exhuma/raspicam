@@ -33,6 +33,8 @@ aptitude install -y \
     python3-numpy \
     python3-pip
 
+sudo pip3 install flask picamera
+
 # Some stuff for development (not really needed for the project)
 aptitude install -y \
     git \
