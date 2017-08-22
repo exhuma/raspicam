@@ -146,8 +146,9 @@ def detect():
         resized = cv2.resize(frame, (320, 240))
         modified = resized.copy()
         current_gray = cv2.cvtColor(modified, cv2.COLOR_BGR2GRAY)
+        current_blur = cv2.GaussianBlur(current_gray, (21, 21), 0)
 
-        frame_delta = cv2.absdiff(reference, current_gray)
+        frame_delta = cv2.absdiff(reference, current_blur)
         thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
         dilated = cv2.dilate(thresh, None, iterations=2)
         contoured, contours, hierarchy = cv2.findContours(
