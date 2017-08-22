@@ -135,6 +135,25 @@ def prepare_frame(frame):
     return resized, output
 
 
+def find_motion_regions(reference, current):
+    '''
+    Returns a list of OpenCV contours of areas where motion was detected
+    between *reference* and *current*. If the list is empty, no motion was
+    detected.
+
+    The second part of the returned tuple is a list of intermediate images.
+    '''
+    frame_delta = cv2.absdiff(reference, current)
+    thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+    dilated = cv2.dilate(thresh, None, iterations=2)
+    _, contours, _ = cv2.findContours(
+        dilated.copy(),
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE)
+    # The first contour is always the complete image
+    return contours[1:], [frame_delta, thresh, dilated]
+
+
 def detect():
     """
     Run motion detection.
@@ -157,17 +176,12 @@ def detect():
         resized, current = prepare_frame(frame)
         modified = resized.copy()
 
-        frame_delta = cv2.absdiff(reference, current)
-        thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
-        dilated = cv2.dilate(thresh, None, iterations=2)
-        contoured, contours, hierarchy = cv2.findContours(
-            dilated.copy(),
-            cv2.RETR_EXTERNAL,
-            cv2.CHAIN_APPROX_SIMPLE)
+        contours, intermediaries = find_motion_regions(reference, current)
+        frame_delta, thresh, dilated = intermediaries
 
-        if len(contours) > 1:  # first contour is always the complete image
+        if contours:
             text = 'motion detected'
-            for contour in contours[1:]:
+            for contour in contours:
                 # if cv2.contourArea(contour) < MIN_AREA:
                 #     continue
                 x, y, w, h = cv2.boundingRect(contour)
