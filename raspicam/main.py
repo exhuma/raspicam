@@ -3,6 +3,8 @@ Flask application which serves a motion-JPEG stream.
 """
 from flask import Flask, render_template, Response
 
+from gouge.colourcli import Simple
+
 from processing import detect
 
 
@@ -39,4 +41,5 @@ def video_feed():
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
+    Simple.basicConfig(level=0)
     app.run(host='0.0.0.0', debug=True)
