@@ -121,6 +121,7 @@ def warmup(frame_generator, iterations=20):
             'Warming up... [%d/%d]' % (i, iterations),
             'settling cam...')
         yield as_jpeg(with_text)
+    LOG.info('Warmup done!')
 
 
 def prepare_frame(frame):
@@ -216,6 +217,7 @@ def detect():
 
         if contours:
             text = 'motion detected'
+            LOG.debug('Motion detected in %d regions', len(contours))
             for contour in contours:
                 # if cv2.contourArea(contour) < MIN_AREA:
                 #     continue
@@ -238,5 +240,3 @@ def detect():
                              current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
         yield as_jpeg(with_text)
-
-
