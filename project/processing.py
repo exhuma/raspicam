@@ -121,6 +121,20 @@ def warmup(frame_generator, iterations=100):
         yield as_jpeg(with_text)
 
 
+def prepare_frame(frame):
+    '''
+    Prepares a frame for all comparison operations.
+
+    For this only resizes and blurs it. But this could in the future also apply
+    masks and whatnot. The general idea is to remove any unwanted data (noise)
+    from the frame which we do not want to consider in motion detection.
+    '''
+    resized = cv2.resize(frame, (320, 240))
+    gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+    output = cv2.GaussianBlur(gray, (21, 21), 0)
+    return resized, output
+
+
 def detect():
     """
     Run motion detection.
@@ -136,19 +150,14 @@ def detect():
         yield frame
 
     first_frame = next(generator)
-
-    resized = cv2.resize(first_frame, (320, 240))
-    gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-    reference = cv2.GaussianBlur(gray, (21, 21), 0)
+    _, reference = prepare_frame(first_frame)
 
     for frame in generator:
         text = 'no motion detected'
-        resized = cv2.resize(frame, (320, 240))
+        resized, current = prepare_frame(frame)
         modified = resized.copy()
-        current_gray = cv2.cvtColor(modified, cv2.COLOR_BGR2GRAY)
-        current_blur = cv2.GaussianBlur(current_gray, (21, 21), 0)
 
-        frame_delta = cv2.absdiff(reference, current_blur)
+        frame_delta = cv2.absdiff(reference, current)
         thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
         dilated = cv2.dilate(thresh, None, iterations=2)
         contoured, contours, hierarchy = cv2.findContours(
