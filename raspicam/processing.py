@@ -5,6 +5,8 @@ This module contains various functions which process image objects.
 import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
+from os import makedirs
+from os.path import join, exists
 
 import cv2
 import numpy as np
@@ -172,11 +174,18 @@ def find_motion_regions(reference, current):
 
 
 def write_snapshot(timestamp, image):
-    filename = timestamp.strftime('%Y-%m-%dT%H.%M.jpg')
+    dirname = timestamp.strftime('%Y-%m-%d')
+    if not exists(dirname):
+        makedirs(dirname)
+    filename = join(
+        dirname, timestamp.strftime('%Y-%m-%dT%H.%M.jpg'))
+    if exists(filename):
+        LOG.debug('Skipping existing file %s', filename)
+        return
     with_text = add_text(
         image,
         "",
-        timestamp.strftime("%A %d %B %Y %I:%M:%S%p"))
+        timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
     cv2.imwrite(filename, with_text)
     LOG.info('Snapshot written to %s', filename)
 
