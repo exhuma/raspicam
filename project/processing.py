@@ -4,13 +4,14 @@ This module contains various functions which process image objects.
 
 import logging
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import cv2
 import numpy as np
 from camera import PiCamera
 
 LOG = logging.getLogger(__name__)
+MAX_REFERENCE_AGE = timedelta(minutes=5)
 Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 
@@ -184,16 +185,18 @@ def detect():
 
     first_frame = next(generator)
     _, reference = prepare_frame(first_frame)
+    last_ref_taken = current_time = datetime.now()
+    refstatus = 'initial frame'
 
     for frame in generator:
         text = 'no motion detected'
-        refstatus = ''
         resized, current = prepare_frame(frame)
-        if is_new_reference(reference, current):
+        current_time = datetime.now()
+        time_since_ref = current_time - last_ref_taken
+        if time_since_ref > MAX_REFERENCE_AGE and is_new_reference(reference, current):
             reference = current
-            refstatus = 'old ref kept'
-        else:
-            refstatus = ' new ref needed'
+            last_ref_taken = current_time
+            refstatus = 'ref @ %s' % last_ref_taken
         modified = resized.copy()
 
         contours, intermediaries = find_motion_regions(reference, current)
@@ -216,7 +219,7 @@ def detect():
 
         with_text = add_text(combined,
                              "Status: {}, ref: {}".format(text, refstatus),
-                             datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"))
+                             current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
         yield as_jpeg(with_text)
 
