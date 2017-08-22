@@ -135,6 +135,20 @@ def prepare_frame(frame):
     return resized, output
 
 
+def is_new_reference(previous_reference, current):
+    '''
+    Determines whether we should consider this frame a new "reference" frame.
+    '''
+    if not previous_reference is not None:
+        return True
+    contours, _ = find_motion_regions(previous_reference, current)
+    if contours:
+        # We have motion and we will not consider this a new reference. We'll
+        # stick to the old one!
+        return False
+    return True
+
+
 def find_motion_regions(reference, current):
     '''
     Returns a list of OpenCV contours of areas where motion was detected
@@ -173,7 +187,13 @@ def detect():
 
     for frame in generator:
         text = 'no motion detected'
+        refstatus = ''
         resized, current = prepare_frame(frame)
+        if is_new_reference(reference, current):
+            reference = current
+            refstatus = 'old ref kept'
+        else:
+            refstatus = ' new ref needed'
         modified = resized.copy()
 
         contours, intermediaries = find_motion_regions(reference, current)
@@ -195,7 +215,7 @@ def detect():
         )
 
         with_text = add_text(combined,
-                             "Status: {}".format(text),
+                             "Status: {}, ref: {}".format(text, refstatus),
                              datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"))
 
         yield as_jpeg(with_text)
