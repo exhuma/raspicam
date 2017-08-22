@@ -112,7 +112,7 @@ def add_text(image, header, footer):
     return canvas
 
 
-def warmup(frame_generator, iterations=100):
+def warmup(frame_generator, iterations=20):
     LOG.info('Warming up...')
     for i in range(1, iterations+1):
         image = next(frame_generator)
