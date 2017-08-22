@@ -11,7 +11,8 @@ import numpy as np
 from camera import PiCamera
 
 LOG = logging.getLogger(__name__)
-MAX_REFERENCE_AGE = timedelta(minutes=5)
+MAX_REFERENCE_AGE = timedelta(minutes=15)
+MIN_SNAPSHOT_INTERVAL = timedelta(minutes=5)
 Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 
@@ -169,6 +170,16 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
+def write_snapshot(timestamp, image):
+    filename = timestamp.strftime('%Y-%m-%dT%H.%M.jpg')
+    with_text = add_text(
+        image,
+        "",
+        timestamp.strftime("%A %d %B %Y %I:%M:%S%p"))
+    cv2.imwrite(filename, with_text)
+    LOG.info('Snapshot written to %s', filename)
+
+
 def detect():
     """
     Run motion detection.
@@ -185,7 +196,7 @@ def detect():
 
     first_frame = next(generator)
     _, reference = prepare_frame(first_frame)
-    last_ref_taken = current_time = datetime.now()
+    last_ref_taken = last_snap_taken = current_time = datetime.now()
     refstatus = 'initial frame'
 
     for frame in generator:
@@ -197,6 +208,7 @@ def detect():
             reference = current
             last_ref_taken = current_time
             refstatus = 'ref @ %s' % last_ref_taken
+            LOG.debug('Reference updated @ %s', last_ref_taken)
         modified = resized.copy()
 
         contours, intermediaries = find_motion_regions(reference, current)
@@ -209,6 +221,10 @@ def detect():
                 #     continue
                 x, y, w, h = cv2.boundingRect(contour)
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            time_since_snap = current_time - last_snap_taken
+            if time_since_snap > MIN_SNAPSHOT_INTERVAL:
+                write_snapshot(current_time, modified)
+                last_snap_taken = current_time
 
         combined = combine(
             reference,
