@@ -191,7 +191,7 @@ def write_snapshot(timestamp, image, ref_timestamp=None, suffix=''):
         LOG.debug('Skipping existing file %s', filename)
         return
     if ref_timestamp:
-        ref_header = ref_timestamp.strftime("Reference @ %A, %Y-%m-%d %H:%M:%S")
+        ref_header = ref_timestamp.strftime("Reference @ %H:%M:%S")
     else:
         ref_header = ''
     with_text = add_text(
