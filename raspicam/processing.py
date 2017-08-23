@@ -88,11 +88,16 @@ def add_text(image, header, footer):
     :param footer:  The footer text
     :return: A new image with header and footer added
     """
-    height, width, channels = image.shape
+    if len(image.shape) == 3:
+        height, width, channels = image.shape
+        canvas_args = [width, channels]
+    else:
+        height, width = image.shape
+        canvas_args = [width]
 
     title_offset = 20
     new_height = height + (2 * title_offset)
-    canvas = np.zeros((new_height, width, channels), np.uint8)
+    canvas = np.zeros((new_height, *canvas_args), np.uint8)
 
     blit(canvas, image, Dimension(width, height), Point2D(0, title_offset))
 
