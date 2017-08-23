@@ -178,12 +178,15 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def write_snapshot(timestamp, image, ref_timestamp=None):
+def write_snapshot(timestamp, image, ref_timestamp=None, suffix=''):
     dirname = timestamp.strftime('%Y-%m-%d')
     if not exists(dirname):
         makedirs(dirname)
+    ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
+    if suffix:
+        ts_text = ts_text + '-' + suffix
     filename = join(
-        dirname, timestamp.strftime('%Y-%m-%dT%H.%M.jpg'))
+        dirname, ts_text + '.jpg')
     if exists(filename):
         LOG.debug('Skipping existing file %s', filename)
         return
@@ -216,6 +219,7 @@ def detect():
     first_frame = next(generator)
     _, reference = prepare_frame(first_frame)
     last_ref_taken = last_snap_taken = current_time = datetime.now()
+    write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
 
     for frame in generator:
@@ -226,6 +230,7 @@ def detect():
         if time_since_ref > MAX_REFERENCE_AGE and is_new_reference(reference, current):
             reference = current
             last_ref_taken = current_time
+            write_snapshot(current_time, frame, None, 'reference')
             refstatus = 'ref @ %s' % last_ref_taken
             LOG.debug('Reference updated @ %s', last_ref_taken)
         modified = resized.copy()
