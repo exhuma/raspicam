@@ -195,10 +195,6 @@ def write_snapshot(timestamp, image, ref_timestamp=None):
         image,
         ref_header,
         timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
-    with_text = add_text(
-        image,
-        "",
-        timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
     cv2.imwrite(filename, with_text)
     LOG.info('Snapshot written to %s', filename)
 
