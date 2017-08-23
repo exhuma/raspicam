@@ -13,8 +13,8 @@ import numpy as np
 from camera import PiCamera
 
 LOG = logging.getLogger(__name__)
-MAX_REFERENCE_AGE = timedelta(minutes=15)
-MIN_SNAPSHOT_INTERVAL = timedelta(minutes=5)
+MAX_REFERENCE_AGE = timedelta(minutes=1)
+MIN_SNAPSHOT_INTERVAL = timedelta(seconds=5)
 Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 
