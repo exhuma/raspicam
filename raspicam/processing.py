@@ -178,13 +178,13 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def write_snapshot(timestamp, image, ref_timestamp=None, suffix=''):
+def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
     dirname = timestamp.strftime('%Y-%m-%d')
+    if subdir:
+        dirname = join(dirname, subdir)
     if not exists(dirname):
         makedirs(dirname)
     ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
-    if suffix:
-        ts_text = ts_text + '-' + suffix
     filename = join(
         dirname, ts_text + '.jpg')
     if exists(filename):
