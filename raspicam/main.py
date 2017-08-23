@@ -1,8 +1,12 @@
 """
 Flask application which serves a motion-JPEG stream.
 """
-from flask import Flask, render_template, Response
+from datetime import datetime
+from glob import glob
+from os.path import join
+from time import sleep
 
+from flask import Flask, render_template, Response
 from gouge.colourcli import Simple
 
 from processing import detect
@@ -30,12 +34,29 @@ def multipart_stream(frame_generator):
                b'\r\n' + output + b'\r\n'
                b'\r\n')
 
+
+def filereader():
+    while True:
+        now = datetime.now()
+        dirname = now.strftime('%Y-%m-%d')
+        fname = sorted(glob('%s/*.jpg' % dirname))[-1]
+        with open(fname, 'rb') as fp:
+            yield fp.read()
+            sleep(0.5)
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
-@app.route('/video_feed')
+@app.route('/file_feed')
+def file_feed():
+    return Response(multipart_stream(filereader()),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/live_feed')
 def video_feed():
     return Response(multipart_stream(detect()),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
