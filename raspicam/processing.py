@@ -173,7 +173,7 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def write_snapshot(timestamp, image):
+def write_snapshot(timestamp, image, ref_timestamp=None):
     dirname = timestamp.strftime('%Y-%m-%d')
     if not exists(dirname):
         makedirs(dirname)
@@ -182,6 +182,14 @@ def write_snapshot(timestamp, image):
     if exists(filename):
         LOG.debug('Skipping existing file %s', filename)
         return
+    if ref_timestamp:
+        ref_header = ref_timestamp.strftime("Reference @ %A, %Y-%m-%d %H:%M:%S")
+    else:
+        ref_header = ''
+    with_text = add_text(
+        image,
+        ref_header,
+        timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
     with_text = add_text(
         image,
         "",
@@ -234,7 +242,7 @@ def detect():
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
             time_since_snap = current_time - last_snap_taken
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
-                write_snapshot(current_time, modified)
+                write_snapshot(current_time, modified, last_ref_taken)
                 last_snap_taken = current_time
 
         combined = combine(
