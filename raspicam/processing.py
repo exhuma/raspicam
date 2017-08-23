@@ -227,7 +227,9 @@ def detect():
         resized, current = prepare_frame(frame)
         current_time = datetime.now()
         time_since_ref = current_time - last_ref_taken
-        if time_since_ref > MAX_REFERENCE_AGE and is_new_reference(reference, current):
+        if (time_since_ref >= 3*MAX_REFERENCE_AGE or
+                time_since_ref > MAX_REFERENCE_AGE and
+                is_new_reference(reference, current)):
             reference = current
             last_ref_taken = current_time
             write_snapshot(current_time, frame, None, 'reference')
