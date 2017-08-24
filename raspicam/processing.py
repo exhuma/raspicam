@@ -3,7 +3,7 @@ This module contains various functions which process image objects.
 """
 
 import logging
-from collections import namedtuple
+from collections import namedtuple, deque
 from datetime import datetime, timedelta
 from os import makedirs
 from os.path import join, exists
@@ -19,6 +19,46 @@ Point2D = namedtuple('Point2D', 'x y')
 Dimension = namedtuple('Dimension', 'width height')
 
 
+class VideoStorage:
+
+    def __init__(self):
+        self.video_length = video_length = 200
+        self.lookbehind = deque(maxlen=video_length)
+        self.lookahead = deque(maxlen=video_length)
+        self.dimension = Dimension(100, 100)
+
+    def write(self, frame, output_needed):
+        self.dimension = Dimension(frame.shape[1], frame.shape[0])
+        timestamp = datetime.now()
+        filename = timestamp.strftime('%Y-%m-%dT%H.%M.%S.avi')
+        if not output_needed:
+            self.lookbehind.append(frame)
+            return True
+        else:
+            LOG.debug('Video dump requested, %d frames in buffer, filling up lookahead: %d/%d',
+                len(self.lookbehind), len(self.lookahead), self.video_length)
+            self.lookahead.append(frame)
+        if len(self.lookahead) == self.lookahead.maxlen:
+            LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',
+                     len(self.lookbehind), len(self.lookahead))
+            writer = cv2.VideoWriter(
+                filename,
+                cv2.VideoWriter_fourcc(*'DIVX'),
+                10.0,
+                (self.dimension.width, self.dimension.height),
+                True)
+            # lookahead is full. Write result to disk
+            for stored_frame in self.lookbehind:
+                writer.write(stored_frame)
+            for stored_frame in self.lookahead:
+                writer.write(stored_frame)
+            writer.release()
+            self.lookbehind.clear()
+            self.lookahead.clear()
+            return True
+        return False
+
+        
 def as_jpeg(image):
     """
     Takes a OpenCV image and converts it to a JPEG image
@@ -212,6 +252,7 @@ def detect():
     """
     cam = PiCamera()
     generator = cam.frame_generator()
+    storage = VideoStorage()
 
     for frame in warmup(generator):
         yield frame
@@ -221,6 +262,7 @@ def detect():
     last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
     write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
+    video_output_needed = False
 
     for frame in generator:
         text = 'no motion detected'
@@ -251,6 +293,7 @@ def detect():
 
         if contours:
             text = 'motion detected'
+            video_output_needed = True
             LOG.debug('Motion detected in %d regions', len(contours))
             for contour in contours:
                 # if cv2.contourArea(contour) < MIN_AREA:
@@ -261,6 +304,9 @@ def detect():
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
                 write_snapshot(current_time, modified, last_ref_taken)
                 last_snap_taken = current_time
+
+        video_storage_finished = storage.write(frame, video_output_needed)
+        video_output_needed = not video_storage_finished
 
         combined = combine(
             reference,
