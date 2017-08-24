@@ -218,7 +218,7 @@ def detect():
 
     first_frame = next(generator)
     _, reference = prepare_frame(first_frame)
-    last_ref_taken = last_snap_taken = current_time = datetime.now()
+    last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
     write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
 
@@ -227,6 +227,15 @@ def detect():
         resized, current = prepare_frame(frame)
         current_time = datetime.now()
         time_since_ref = current_time - last_ref_taken
+        time_since_last_debug = current_time - last_ref_taken
+        if time_since_last_debug >= 3*MAX_REFERENCE_AGE:
+            # Write out some images for debugging
+            if not exists('debug'):
+                makedirs('debug')
+            cv2.imwrite('debug/resized.jpg', resized)
+            cv2.imwrite('debug/current.jpg', current)
+            last_debug_taken = current_time
+            LOG.info('Debug data written to "debug"')
         if (time_since_ref >= 3*MAX_REFERENCE_AGE or
                 time_since_ref > MAX_REFERENCE_AGE and
                 is_new_reference(reference, current)):
