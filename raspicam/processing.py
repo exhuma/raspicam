@@ -305,15 +305,15 @@ def detect():
                 write_snapshot(current_time, modified, last_ref_taken)
                 last_snap_taken = current_time
 
-        video_storage_finished = storage.write(frame, video_output_needed)
-        video_output_needed = not video_storage_finished
-
         combined = combine(
             reference,
             frame_delta,
             dilated,
             modified
         )
+
+        video_storage_finished = storage.write(combined, video_output_needed)
+        video_output_needed = not video_storage_finished
 
         with_text = add_text(combined,
                              "Status: {}, ref: {}".format(text, refstatus),
