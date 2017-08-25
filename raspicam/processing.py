@@ -30,7 +30,7 @@ class VideoStorage:
     def write(self, frame, output_needed):
         self.dimension = Dimension(frame.shape[1], frame.shape[0])
         timestamp = datetime.now()
-        filename = timestamp.strftime('%Y-%m-%dT%H.%M.%S.avi')
+        filename = timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv')
         if not output_needed:
             self.lookbehind.append(frame)
             return True
@@ -43,7 +43,7 @@ class VideoStorage:
                      len(self.lookbehind), len(self.lookahead))
             writer = cv2.VideoWriter(
                 filename,
-                cv2.VideoWriter_fourcc(*'DIVX'),
+                cv2.VideoWriter_fourcc(*'H264'),
                 10.0,
                 (self.dimension.width, self.dimension.height),
                 True)
