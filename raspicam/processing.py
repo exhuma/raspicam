@@ -10,7 +10,7 @@ from os.path import join, exists
 
 import cv2
 import numpy as np
-from camera import PiCamera
+from camera import PiCamera, USBCam
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)
@@ -242,7 +242,7 @@ def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
     LOG.info('Snapshot written to %s', filename)
 
 
-def detect():
+def detect(cam):
     """
     Run motion detection.
     
@@ -250,7 +250,6 @@ def detect():
     
     :return: A stream of bytes objects
     """
-    cam = PiCamera()
     generator = cam.frame_generator()
     storage = VideoStorage()
 

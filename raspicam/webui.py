@@ -10,6 +10,7 @@ from flask import Flask, render_template, Response
 from gouge.colourcli import Simple
 
 from processing import detect
+from camera import USBCam
 
 
 app = Flask(__name__)
@@ -58,7 +59,8 @@ def file_feed():
 
 @app.route('/live_feed')
 def video_feed():
-    return Response(multipart_stream(detect()),
+    camera = USBCam()
+    return Response(multipart_stream(detect(camera)),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
