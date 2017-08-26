@@ -57,10 +57,12 @@ class Application:
         cv2.destroyAllWindows()
 
     def run_webui(self):
+        self.init()
         app = make_app(self.frames, self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
+        self.init()
         for frame in detect(self.frames, self.storage):
             pass
 
