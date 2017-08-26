@@ -5,6 +5,8 @@ import cv2
 
 from camera import USBCam, PiCamera
 from processing import  detect
+
+from raspicam.storage import VideoStorage, NullStorage
 from raspicam.webui import make_app
 
 
@@ -17,10 +19,12 @@ class Application:
         self.config = config
         self.initialised = False
         self.frames = []
+        self.storage = NullStorage()
 
     def init(self):
         if not self.initialised:
             self.frames = self._get_framesource()
+            self.storage = VideoStorage()
             self.initialised = True
             LOG.info('Application successfully initialised.')
 
@@ -44,7 +48,7 @@ class Application:
 
     def run_gui(self):
         self.init()
-        for frame in detect(self.frames):
+        for frame in detect(self.frames, self.storage):
             cv2.imshow('frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -57,7 +61,7 @@ class Application:
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
-        for frame in detect(self.frames):
+        for frame in detect(self.frames, self.storage):
             pass
 
 logging.basicConfig(level=0)

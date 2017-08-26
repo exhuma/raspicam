@@ -49,3 +49,7 @@ class VideoStorage:
         return False
 
 
+class NullStorage:
+
+    def write(self, frame, output_needed):
+        LOG.debug('Writing frame to NullStorage')

@@ -10,7 +10,7 @@ from os.path import join, exists
 import cv2
 import numpy as np
 
-from raspicam.storage import VideoStorage
+from raspicam.storage import NullStorage
 from raspicam.types import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
@@ -201,7 +201,7 @@ def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
     LOG.info('Snapshot written to %s', filename)
 
 
-def detect(frame_generator):
+def detect(frame_generator, storage=None):
     """
     Run motion detection.
     
@@ -209,7 +209,8 @@ def detect(frame_generator):
     
     :return: A stream of bytes objects
     """
-    storage = VideoStorage()
+
+    storage = storage or NullStorage()
 
     for frame in warmup(frame_generator):
         yield frame
