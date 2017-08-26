@@ -77,15 +77,19 @@ def videos(path=''):
     sysdir = join(basedir, path)
     videos = []
     paths = []
+    images = []
     for fname in listdir(sysdir):
         relname = join(path, fname)
         sysname = join(sysdir, fname)
         if fname.endswith('.avi') or fname.endswith('.mkv'):
             videos.append(relname)
+        if fname.endswith('.jpg'):
+            images.append(relname)
         elif isdir(sysname):
             paths.append(relname)
     entries = {
         'videos': sorted(videos),
+        'images': sorted(images),
         'paths': sorted(paths)
     }
     return render_template('browser.html', entries=entries)
