@@ -71,9 +71,9 @@ def player(fname):
 
 
 @ROOT.route('/')
-@ROOT.route('/videos')
-@ROOT.route('/videos/<path:path>')
-def videos(path=''):
+@ROOT.route('/files')
+@ROOT.route('/files/<path:path>')
+def files(path=''):
     basedir = current_app.localconf.get('storage', 'root')
     sysdir = join(basedir, path)
     videos = []

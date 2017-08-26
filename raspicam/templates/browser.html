@@ -10,7 +10,7 @@
     <tbody>
       {% for filename in entries['paths'] %}
       <tr>
-        <td>[<a href='{{ url_for('root.videos', path=filename) }}'>{{filename}}</a>]</td>
+        <td>[<a href='{{ url_for('root.files', path=filename) }}'>{{filename}}</a>]</td>
         <td></td>
         <td></td>
       </tr>
