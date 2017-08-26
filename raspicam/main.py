@@ -12,10 +12,10 @@ class Application:
 
     def __init__(self, config):
         self.config = config
-        self.camera = USBCam()
+        self.frame_generator = USBCam().frame_generator()
 
     def run_gui(self):
-        for frame in detect(self.camera):
+        for frame in detect(self.frame_generator):
             cv2.imshow('frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -24,11 +24,11 @@ class Application:
         cv2.destroyAllWindows()
 
     def run_webui(self):
-        app = make_app(self.camera, self.config)
+        app = make_app(self.frame_generator, self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
-        for frame in detect(self.camera):
+        for frame in detect(self.frame_generator):
             pass
 
 logging.basicConfig(level=0)

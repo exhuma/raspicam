@@ -242,7 +242,7 @@ def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
     LOG.info('Snapshot written to %s', filename)
 
 
-def detect(cam):
+def detect(frame_generator):
     """
     Run motion detection.
     
@@ -250,20 +250,19 @@ def detect(cam):
     
     :return: A stream of bytes objects
     """
-    generator = cam.frame_generator()
     storage = VideoStorage()
 
-    for frame in warmup(generator):
+    for frame in warmup(frame_generator):
         yield frame
 
-    first_frame = next(generator)
+    first_frame = next(frame_generator)
     _, reference = prepare_frame(first_frame)
     last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
     write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
     video_output_needed = False
 
-    for frame in generator:
+    for frame in frame_generator:
         text = 'no motion detected'
         resized, current = prepare_frame(frame)
         current_time = datetime.now()
