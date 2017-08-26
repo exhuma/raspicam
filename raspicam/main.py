@@ -3,7 +3,7 @@ import logging
 from config_resolver import Config
 import cv2
 
-from camera import USBCam
+from camera import USBCam, PiCamera
 from processing import  detect
 from raspicam.webui import make_app
 
@@ -20,9 +20,27 @@ class Application:
 
     def init(self):
         if not self.initialised:
-            self.frames = USBCam().frame_generator()
+            self.frames = self._get_framesource()
             self.initialised = True
             LOG.info('Application successfully initialised.')
+
+    def _get_framesource(self):
+        kind = self.config.get('framesource', 'kind').lower()
+        raw_arguments = self.config.get('framesource', 'arguments', default='')
+        if raw_arguments.strip():
+            arguments = [arg.strip() for arg in raw_arguments.split(',')]
+        else:
+            arguments = []
+        if kind == 'usb':
+            if len(arguments) == 0:
+                index = -1
+            else:
+                index = int(arguments[0])
+            return USBCam(index).frame_generator()
+        elif kind == 'raspberrypi':
+            return PiCamera().frame_generator()
+        else:
+            raise ValueError('%s is an unsupported frame source!')
 
     def run_gui(self):
         self.init()
