@@ -5,10 +5,12 @@ setup(
     version='1.0',
     packages=find_packages(),
     install_requires=[
-        'gouge'
+        'gouge',
+        'config_resolver',
     ],
     requires=[
-        'gouge'
+        'gouge',
+        'config_resolver',
     ],
     provides=['raspicam'],
     include_package_data=True,
