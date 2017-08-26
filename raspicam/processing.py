@@ -46,14 +46,14 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
     offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
-def combine(reference, frame_delta, dilated, modified):
+def combine(current, foreground, unmodified, modified):
     """
     Tile 4 images onto one big canvas.
     
-    :param reference: The first image
-    :param frame_delta: The second image
-    :param dilated: The third image
-    :param modified: The fourth image
+    :param current: The image that is currently in use for detection
+    :param foreground: The result of foreground detection
+    :param unmodified: The frame as seen by the camera
+    :param modified: With debug information
     :return: A new canvas with those 4 images tiled
     """
 
@@ -62,14 +62,13 @@ def combine(reference, frame_delta, dilated, modified):
     height = 240 * 2 + 30
     canvas = np.zeros((height, width, 3), np.uint8)
 
-    reference_rgb = cv2.cvtColor(reference, cv2.COLOR_GRAY2RGB)
-    delta_rgb = cv2.cvtColor(frame_delta, cv2.COLOR_GRAY2RGB)
-    dilated_rgb = cv2.cvtColor(dilated, cv2.COLOR_GRAY2RGB)
+    current = cv2.cvtColor(current, cv2.COLOR_GRAY2RGB)
+    foreground = cv2.cvtColor(foreground, cv2.COLOR_GRAY2RGB)
 
-    blit(canvas, reference_rgb, Dimension(320, 240), Point2D(10, 10))
-    blit(canvas, modified, Dimension(320, 240), Point2D(320+20, 10))
-    blit(canvas, delta_rgb, Dimension(320, 240), Point2D(10, 240+20))
-    blit(canvas, dilated_rgb, Dimension(320, 240), Point2D(320+20, 240+20))
+    blit(canvas, current, Dimension(320, 240), Point2D(10, 10))
+    blit(canvas, foreground, Dimension(320, 240), Point2D(320+20, 10))
+    blit(canvas, unmodified, Dimension(320, 240), Point2D(10, 240+20))
+    blit(canvas, modified, Dimension(320, 240), Point2D(320+20, 240+20))
 
     return canvas
 
@@ -144,37 +143,21 @@ def prepare_frame(frame):
     return resized, output
 
 
-def is_new_reference(previous_reference, current):
+def find_motion_regions(fgbg, current):
     '''
-    Determines whether we should consider this frame a new "reference" frame.
-    '''
-    if not previous_reference is not None:
-        return True
-    contours, _ = find_motion_regions(previous_reference, current)
-    if contours:
-        # We have motion and we will not consider this a new reference. We'll
-        # stick to the old one!
-        return False
-    return True
-
-
-def find_motion_regions(reference, current):
-    '''
-    Returns a list of OpenCV contours of areas where motion was detected
-    between *reference* and *current*. If the list is empty, no motion was
-    detected.
+    Returns a list of OpenCV contours of areas where motion was detected.
+    If the list is empty, no motion was detected.
 
     The second part of the returned tuple is a list of intermediate images.
     '''
-    frame_delta = cv2.absdiff(reference, current)
-    thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
-    dilated = cv2.dilate(thresh, None, iterations=2)
+
+    fgmask = fgbg.apply(current)
     _, contours, _ = cv2.findContours(
-        dilated.copy(),
+        fgmask,
         cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
-    # The first contour is always the complete image
-    return contours[1:], [frame_delta, thresh, dilated]
+    contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
+    return contours, [fgmask]
 
 
 def detect(frame_generator, storage=None):
@@ -191,58 +174,37 @@ def detect(frame_generator, storage=None):
     for frame in warmup(frame_generator):
         yield frame
 
-    first_frame = next(frame_generator)
-    _, reference = prepare_frame(first_frame)
-    last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
-    storage.write_snapshot(current_time, first_frame, None, 'reference')
-    refstatus = 'initial frame'
+    fgbg = cv2.createBackgroundSubtractorMOG2()
+
+    last_snap_taken = last_debug_taken = current_time = datetime.now()
     video_output_needed = False
 
     for frame in frame_generator:
         text = 'no motion detected'
         resized, current = prepare_frame(frame)
         current_time = datetime.now()
-        time_since_ref = current_time - last_ref_taken
-        time_since_last_debug = current_time - last_ref_taken
-        if time_since_last_debug >= 3*MAX_REFERENCE_AGE:
-            # Write out some images for debugging
-            if not exists('debug'):
-                makedirs('debug')
-            cv2.imwrite('debug/resized.jpg', resized)
-            cv2.imwrite('debug/current.jpg', current)
-            last_debug_taken = current_time
-            LOG.info('Debug data written to "debug"')
-        if (time_since_ref >= 3*MAX_REFERENCE_AGE or
-                time_since_ref > MAX_REFERENCE_AGE and
-                is_new_reference(reference, current)):
-            reference = current
-            last_ref_taken = current_time
-            storage.write_snapshot(current_time, frame, None, 'reference')
-            refstatus = 'ref @ %s' % last_ref_taken
-            LOG.debug('Reference updated @ %s', last_ref_taken)
         modified = resized.copy()
 
-        contours, intermediaries = find_motion_regions(reference, current)
-        frame_delta, thresh, dilated = intermediaries
+        contours, intermediaries = find_motion_regions(fgbg, current)
 
         if contours:
             text = 'motion detected'
             video_output_needed = True
             LOG.debug('Motion detected in %d regions', len(contours))
+
             for contour in contours:
-                # if cv2.contourArea(contour) < MIN_AREA:
-                #     continue
                 x, y, w, h = cv2.boundingRect(contour)
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
             time_since_snap = current_time - last_snap_taken
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
-                storage.write_snapshot(current_time, modified, last_ref_taken)
+                storage.write_snapshot(current_time, modified)
                 last_snap_taken = current_time
 
         combined = combine(
-            reference,
-            frame_delta,
-            dilated,
+            current,
+            intermediaries[0],
+            resized,
             modified
         )
 
@@ -250,7 +212,7 @@ def detect(frame_generator, storage=None):
         video_output_needed = not video_storage_finished
 
         with_text = add_text(combined,
-                             "Status: {}, ref: {}".format(text, refstatus),
+                             "Status: {}".format(text),
                              current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
         yield with_text
