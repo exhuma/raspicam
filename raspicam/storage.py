@@ -4,7 +4,7 @@ from datetime import datetime
 
 import cv2
 
-from raspicam.types import Dimension
+from raspicam.localtypes import Dimension
 
 LOG = logging.getLogger(__name__)
 

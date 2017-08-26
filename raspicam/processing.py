@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 
 from raspicam.storage import NullStorage
-from raspicam.types import Dimension, Point2D
+from raspicam.localtypes import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)
