@@ -167,7 +167,7 @@ def warmup(frame_generator, iterations=20):
             image,
             'Warming up... [%d/%d]' % (i, iterations),
             'settling cam...')
-        yield as_jpeg(with_text)
+        yield with_text
     LOG.info('Warmup done!')
 
 
@@ -318,4 +318,4 @@ def detect(cam):
                              "Status: {}, ref: {}".format(text, refstatus),
                              current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
-        yield as_jpeg(with_text)
+        yield with_text
