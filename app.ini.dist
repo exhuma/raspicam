@@ -1,0 +1,25 @@
+;
+; This section contains information about where to store files
+;
+[storage]
+root = E:\tmp\motion
+num_context_frames = 100
+
+;
+; Video Format details, In case of video storage.
+;
+[video]
+format = divx
+
+;
+; Specify where the frames are coming from.
+;
+[framesource]
+
+; The "kind" of souce. Currently supports "usb" and "raspberrypi"
+kind = usb
+
+; Arguments for the frame source. Currently only used by "usb" and contains the
+; index of the camera to use. If not specified uses "-1" which triggers a
+; lookup.
+arguments = 1
