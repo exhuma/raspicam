@@ -38,6 +38,7 @@ aptitude install -y \
     pkg-config \
     python3-dev \
     python3-numpy \
+    python3-venv \
     python3-pip
 
 sudo pip3 install flask picamera
