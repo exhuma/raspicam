@@ -66,8 +66,19 @@ class Application:
         for frame in detect(self.frames, self.storage):
             pass
 
-logging.basicConfig(level=0)
-config = Config('exhuma', 'raspicam', require_load=True)
-# print(config.get('video', 'format', default='h264'))
-app = Application(config)
-app.run_gui()
+if __name__ == "__main__":
+    import sys
+
+    logging.basicConfig(level=0)
+    config = Config('exhuma', 'raspicam', require_load=True)
+    ui = sys.argv[1]
+    app = Application(config)
+
+    if ui == 'cli':
+        app.run_cli()
+    elif ui == 'webui':
+        app.run_webui()
+    elif ui == 'gui':
+        app.run_gui()
+    else:
+        print("ui must be cli, webui or gui")
