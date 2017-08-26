@@ -23,8 +23,8 @@ class Application:
 
     def init(self):
         if not self.initialised:
+            self.storage = VideoStorage.from_config(self.config)
             self.frames = self._get_framesource()
-            self.storage = VideoStorage()
             self.initialised = True
             LOG.info('Application successfully initialised.')
 

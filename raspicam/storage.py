@@ -17,6 +17,17 @@ class VideoStorage:
         self.lookahead = deque(maxlen=video_length)
         self.dimension = Dimension(100, 100)
 
+    @staticmethod
+    def from_config(config):
+        instance = VideoStorage()
+        video_length = int(
+            config.get('storage', 'num_context_frames', default=200))
+        instance.video_length = video_length
+        instance.lookbehind = deque(maxlen=video_length)
+        instance.lookahead = deque(maxlen=video_length)
+        LOG.debug('Storage created')
+        return instance
+
     def write(self, frame, output_needed):
         self.dimension = Dimension(frame.shape[1], frame.shape[0])
         timestamp = datetime.now()
