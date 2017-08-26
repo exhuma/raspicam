@@ -30,7 +30,8 @@ class VideoStorage:
     def write(self, frame, output_needed):
         self.dimension = Dimension(frame.shape[1], frame.shape[0])
         timestamp = datetime.now()
-        filename = timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv')
+        folder = timestamped_folder(timestamp, 'videos')
+        filename = join(folder, timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv'))
         if not output_needed:
             self.lookbehind.append(frame)
             return True
@@ -218,12 +219,18 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
+def timestamped_folder(timestamp=None, subdir=''):
+    timestamp = timestamp or datetime.now()
     dirname = timestamp.strftime('%Y-%m-%d')
     if subdir:
         dirname = join(dirname, subdir)
     if not exists(dirname):
         makedirs(dirname)
+    return dirname
+
+
+def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
+    dirname = timestamped_folder(timestamp, subdir)
     ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
     filename = join(
         dirname, ts_text + '.jpg')
