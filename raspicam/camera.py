@@ -17,8 +17,11 @@ class Camera(metaclass=ABCMeta):
 
 class USBCam(Camera):
 
+    def __init__(self, index=-1):
+        self.index = index
+
     def frame_generator(self):
-        video = cv2.VideoCapture(1)
+        video = cv2.VideoCapture(self.index)
         if not video.isOpened():
             raise Exception('Unable to open camera')
         while True:
