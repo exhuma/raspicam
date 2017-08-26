@@ -143,7 +143,7 @@ def prepare_frame(frame):
     return resized, output
 
 
-def find_motion_regions(fgbg, current):
+def find_motion_regions(fgbg, current, mask):
     '''
     Returns a list of OpenCV contours of areas where motion was detected.
     If the list is empty, no motion was detected.
@@ -151,7 +151,14 @@ def find_motion_regions(fgbg, current):
     The second part of the returned tuple is a list of intermediate images.
     '''
 
-    fgmask = fgbg.apply(current)
+    if current.shape != mask.shape:
+        LOG.warning('Mask has differend dimensions than the processed image. It should be %s but is %s', current.shape, mask.shape)
+        mask = cv2.resize(mask, current.shape)
+
+    mask = cv2.inRange(mask, 0, 0) != 0
+    masked_current = np.ma.masked_array(current, mask=mask, fill_value=0).filled()
+
+    fgmask = fgbg.apply(masked_current)
     shadows = cv2.inRange(fgmask, 127, 127) == 255
     without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
     _, contours, _ = cv2.findContours(
@@ -159,10 +166,10 @@ def find_motion_regions(fgbg, current):
         cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
     contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-    return contours, [current, without_shadows]
+    return contours, [masked_current, without_shadows]
 
 
-def detect(frame_generator, storage=None):
+def detect(frame_generator, storage=None, mask=None):
     """
     Run motion detection.
     
@@ -172,6 +179,9 @@ def detect(frame_generator, storage=None):
     """
 
     storage = storage or NullStorage()
+
+    if mask:
+        mask = cv2.imread(mask, 0)
 
     for frame in warmup(frame_generator):
         yield frame
@@ -187,7 +197,7 @@ def detect(frame_generator, storage=None):
         current_time = datetime.now()
         modified = resized.copy()
 
-        contours, intermediaries = find_motion_regions(fgbg, current)
+        contours, intermediaries = find_motion_regions(fgbg, current, mask)
 
         if contours:
             text = 'motion detected'

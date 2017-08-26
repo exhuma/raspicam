@@ -19,12 +19,14 @@ class Application:
         self.config = config
         self.initialised = False
         self.frames = iter([])
+        self.mask = None
         self.storage = NullStorage()
 
     def init(self):
         if not self.initialised:
             self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
+            self.mask = self.config.get('detection', 'mask', default=None)
             self.initialised = True
             LOG.info('Application successfully initialised.')
 
@@ -48,7 +50,7 @@ class Application:
 
     def run_gui(self):
         self.init()
-        for frame in detect(self.frames, self.storage):
+        for frame in detect(self.frames, self.storage, self.mask):
             cv2.imshow('frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -58,12 +60,12 @@ class Application:
 
     def run_webui(self):
         self.init()
-        app = make_app(detect(self.frames, self.storage), self.config)
+        app = make_app(detect(self.frames, self.storage, self.mask), self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
         self.init()
-        for frame in detect(self.frames, self.storage):
+        for frame in detect(self.frames, self.storage, self.mask):
             pass
 
 if __name__ == "__main__":

@@ -23,3 +23,13 @@ kind = usb
 ; index of the camera to use. If not specified uses "-1" which triggers a
 ; lookup.
 arguments = 1
+
+
+;
+; Options for the detection step
+;
+[detection]
+
+; Apply a mask. This should be a black/white image. Everything black is masked,
+; white will be processed.
+mask = /path/to/mask
