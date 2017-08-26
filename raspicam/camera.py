@@ -1,6 +1,4 @@
 import logging
-# import picamera
-# import picamera.array
 from abc import ABCMeta, abstractmethod
 
 import cv2
@@ -33,6 +31,8 @@ class USBCam(Camera):
 class PiCamera(Camera):
 
     def frame_generator(self):
+        import picamera
+        import picamera.array
         with picamera.PiCamera() as camera:
             with picamera.array.PiRGBArray(camera) as output:
                 camera.resolution = (640, 480)
