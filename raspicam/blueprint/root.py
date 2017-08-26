@@ -1,7 +1,11 @@
 from datetime import datetime
 from glob import glob
+from os import listdir
+from os.path import join, isdir, abspath
 from time import sleep
-from flask import Blueprint, render_template, current_app, Response
+
+from flask import Blueprint, current_app
+from flask import render_template, Response, send_file
 
 from raspicam.processing import as_jpeg
 
@@ -42,6 +46,48 @@ def filereader():
 @ROOT.route('/')
 def index():
     return render_template('index.html')
+
+
+@ROOT.route('/file/<path:fname>')
+def file(fname):
+    basedir = current_app.localconf.get('storage', 'root')
+    filepath = join(basedir, fname)
+    # TODO This is UNSAFE!
+    return send_file(
+        abspath(filepath),
+        as_attachment=False,
+        conditional=True
+    )
+    # with open(filepath, 'rb') as fp:
+    #     return send_file(
+    #         fp,
+    #         attachment_filename=basename(filepath))
+    # return send_from_directory(base, fname, as_attachment=False, conditional=True)
+
+
+@ROOT.route('/player/<path:fname>')
+def player(fname):
+    return render_template('player.html', fname=fname)
+
+
+@ROOT.route('/videos')
+@ROOT.route('/videos/<path:path>')
+def videos(path=''):
+    basedir = current_app.localconf.get('storage', 'root')
+    base = join(basedir, path)
+    videos = []
+    paths = []
+    for fname in listdir(base):
+        fullname = join(base, fname)
+        if fname.endswith('.avi') or fname.endswith('.mkv'):
+            videos.append(fullname)
+        elif isdir(fullname):
+            paths.append(fullname)
+    entries = {
+        'videos': sorted(videos),
+        'paths': sorted(paths)
+    }
+    return render_template('browser.html', entries=entries)
 
 
 @ROOT.route('/file_feed')

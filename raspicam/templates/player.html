@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+<body>
+  <h1>WARNING: This is currently unsafe and may expose your host to hacking!</h1>
+  <video src="{{url_for('root.file', fname=fname)}}" autoplay controls>
+    Video Tag not supported!
+  </video>
+  <br />
+  <a href="{{url_for('root.file', fname=fname)}}">Download {{fname}}</a>
+</body>
+</html>
