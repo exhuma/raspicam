@@ -74,15 +74,16 @@ def player(fname):
 @ROOT.route('/videos/<path:path>')
 def videos(path=''):
     basedir = current_app.localconf.get('storage', 'root')
-    base = join(basedir, path)
+    sysdir = join(basedir, path)
     videos = []
     paths = []
-    for fname in listdir(base):
-        fullname = join(base, fname)
+    for fname in listdir(sysdir):
+        relname = join(path, fname)
+        sysname = join(sysdir, fname)
         if fname.endswith('.avi') or fname.endswith('.mkv'):
-            videos.append(fullname)
-        elif isdir(fullname):
-            paths.append(fullname)
+            videos.append(relname)
+        elif isdir(sysname):
+            paths.append(relname)
     entries = {
         'videos': sorted(videos),
         'paths': sorted(paths)
