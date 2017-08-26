@@ -6,7 +6,7 @@ import cv2
 from camera import USBCam, PiCamera
 from processing import  detect
 
-from raspicam.storage import VideoStorage, NullStorage
+from raspicam.storage import Storage, NullStorage
 from raspicam.webui import make_app
 
 
@@ -23,7 +23,7 @@ class Application:
 
     def init(self):
         if not self.initialised:
-            self.storage = VideoStorage.from_config(self.config)
+            self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
             self.initialised = True
             LOG.info('Application successfully initialised.')

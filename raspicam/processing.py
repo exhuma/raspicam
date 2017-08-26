@@ -270,7 +270,7 @@ def detect(frame_generator, storage=None):
             modified
         )
 
-        video_storage_finished = storage.write(combined, video_output_needed)
+        video_storage_finished = storage.write_video(combined, video_output_needed)
         video_output_needed = not video_storage_finished
 
         with_text = add_text(combined,
