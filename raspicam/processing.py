@@ -194,7 +194,7 @@ def detect(frame_generator, storage=None):
 
             for contour in contours:
                 x, y, w, h = cv2.boundingRect(contour)
-                cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
             time_since_snap = current_time - last_snap_taken
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
