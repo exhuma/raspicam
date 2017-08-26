@@ -43,8 +43,8 @@ def filereader():
             sleep(0.5)
 
 
-@ROOT.route('/')
-def index():
+@ROOT.route('/show_stream')
+def show_stream():
     return render_template('index.html')
 
 
@@ -70,6 +70,7 @@ def player(fname):
     return render_template('player.html', fname=fname)
 
 
+@ROOT.route('/')
 @ROOT.route('/videos')
 @ROOT.route('/videos/<path:path>')
 def videos(path=''):
