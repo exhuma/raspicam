@@ -27,6 +27,9 @@ class Storage(metaclass=ABCMeta):
     def write_video(self, frame, output_needed):
         raise NotImplementedError('Not yet implemented')
 
+    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+        raise NotImplementedError('Not yet implemented')
+
     @staticmethod
     def from_config(config):
         instance = DiskStorage()
@@ -102,8 +105,27 @@ class DiskStorage(Storage):
             return True
         return False
 
+    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+        dirname = join(self.root, timestamp.strftime('%Y-%m-%d'), 'images')
+        if subdir:
+            dirname = join(dirname, subdir)
+        if not exists(dirname):
+            makedirs(dirname)
+        ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
+        filename = join(
+            dirname, ts_text + '.jpg')
+        if exists(filename):
+            LOG.debug('Skipping existing file %s', filename)
+            return
+        cv2.imwrite(filename, image)
+        LOG.info('Snapshot written to %s', filename)
+
+
 
 class NullStorage(Storage):
 
     def write_video(self, frame, output_needed):
-        LOG.debug('Writing frame to NullStorage')
+        LOG.debug('Writing video frame to NullStorage')
+
+    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+        LOG.debug('Writing image frame to NullStorage')

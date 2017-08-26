@@ -177,30 +177,6 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
-    dirname = timestamp.strftime('%Y-%m-%d')
-    if subdir:
-        dirname = join(dirname, subdir)
-    if not exists(dirname):
-        makedirs(dirname)
-    ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
-    filename = join(
-        dirname, ts_text + '.jpg')
-    if exists(filename):
-        LOG.debug('Skipping existing file %s', filename)
-        return
-    if ref_timestamp:
-        ref_header = ref_timestamp.strftime("Reference @ %H:%M:%S")
-    else:
-        ref_header = ''
-    with_text = add_text(
-        image,
-        ref_header,
-        timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
-    cv2.imwrite(filename, with_text)
-    LOG.info('Snapshot written to %s', filename)
-
-
 def detect(frame_generator, storage=None):
     """
     Run motion detection.
@@ -218,7 +194,7 @@ def detect(frame_generator, storage=None):
     first_frame = next(frame_generator)
     _, reference = prepare_frame(first_frame)
     last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
-    write_snapshot(current_time, first_frame, None, 'reference')
+    storage.write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
     video_output_needed = False
 
@@ -241,7 +217,7 @@ def detect(frame_generator, storage=None):
                 is_new_reference(reference, current)):
             reference = current
             last_ref_taken = current_time
-            write_snapshot(current_time, frame, None, 'reference')
+            storage.write_snapshot(current_time, frame, None, 'reference')
             refstatus = 'ref @ %s' % last_ref_taken
             LOG.debug('Reference updated @ %s', last_ref_taken)
         modified = resized.copy()
@@ -260,7 +236,7 @@ def detect(frame_generator, storage=None):
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
             time_since_snap = current_time - last_snap_taken
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
-                write_snapshot(current_time, modified, last_ref_taken)
+                storage.write_snapshot(current_time, modified, last_ref_taken)
                 last_snap_taken = current_time
 
         combined = combine(
