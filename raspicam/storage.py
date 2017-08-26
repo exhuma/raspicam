@@ -20,6 +20,7 @@ class Storage(metaclass=ABCMeta):
         self.lookbehind = deque(maxlen=video_length)
         self.lookahead = deque(maxlen=video_length)
         self.dimension = Dimension(100, 100)
+        self.format = 'h264'
         self.root = getcwd()
 
     @abstractmethod
@@ -35,8 +36,27 @@ class Storage(metaclass=ABCMeta):
         instance.lookbehind = deque(maxlen=video_length)
         instance.lookahead = deque(maxlen=video_length)
         instance.root = config.get('storage', 'root')
+        instance.format = config.get('video', 'format', default='h264')
         LOG.debug('Storage created: %r', instance)
         return instance
+
+    @property
+    def video_extension(self):
+        if self.format == 'divx':
+            return '.avi'
+        elif self.format == 'h264':
+            return '.mkv'
+        else:
+            raise ValueError('Unknown Video Format')
+
+    @property
+    def fourcc(self):
+        if self.format == 'divx':
+            return 'DIVX'
+        elif self.format == 'h264':
+            return 'H264'
+        else:
+            raise ValueError('Unknown Video Format')
 
     def __repr__(self):
         return '<%s root=%r context=%r>' % (
@@ -52,7 +72,8 @@ class DiskStorage(Storage):
         dirname = join(self.root, day, 'video')
         if not exists(dirname):
             makedirs(dirname)
-        filename = join(dirname, timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv'))
+        basename = timestamp.strftime('%Y-%m-%dT%H.%M.%S') + self.video_extension
+        absname = join(dirname, basename)
         if not output_needed:
             self.lookbehind.append(frame)
             return True
@@ -64,8 +85,8 @@ class DiskStorage(Storage):
             LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',
                      len(self.lookbehind), len(self.lookahead))
             writer = cv2.VideoWriter(
-                filename,
-                cv2.VideoWriter_fourcc(*'H264'),
+                absname,
+                cv2.VideoWriter_fourcc(*self.fourcc),
                 10.0,
                 (self.dimension.width, self.dimension.height),
                 True)
@@ -77,7 +98,7 @@ class DiskStorage(Storage):
             writer.release()
             self.lookbehind.clear()
             self.lookahead.clear()
-            LOG.info('Video written to %r', filename)
+            LOG.info('Video written to %r (codec=%s)', absname, self.format)
             return True
         return False
 
