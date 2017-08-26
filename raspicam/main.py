@@ -18,7 +18,7 @@ class Application:
     def __init__(self, config):
         self.config = config
         self.initialised = False
-        self.frames = []
+        self.frames = iter([])
         self.storage = NullStorage()
 
     def init(self):
