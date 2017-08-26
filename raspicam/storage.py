@@ -4,6 +4,9 @@ from collections import deque
 from datetime import datetime
 
 import cv2
+from os import getcwd, makedirs
+
+from os.path import join, exists
 
 from raspicam.localtypes import Dimension
 
@@ -17,7 +20,7 @@ class Storage(metaclass=ABCMeta):
         self.lookbehind = deque(maxlen=video_length)
         self.lookahead = deque(maxlen=video_length)
         self.dimension = Dimension(100, 100)
-        self.root = ''
+        self.root = getcwd()
 
     @abstractmethod
     def write_video(self, frame, output_needed):
@@ -31,6 +34,7 @@ class Storage(metaclass=ABCMeta):
         instance.video_length = video_length
         instance.lookbehind = deque(maxlen=video_length)
         instance.lookahead = deque(maxlen=video_length)
+        instance.root = config.get('storage', 'root')
         LOG.debug('Storage created: %r', instance)
         return instance
 
@@ -44,7 +48,11 @@ class DiskStorage(Storage):
     def write_video(self, frame, output_needed):
         self.dimension = Dimension(frame.shape[1], frame.shape[0])
         timestamp = datetime.now()
-        filename = timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv')
+        day = timestamp.strftime('%Y-%m-%d')
+        dirname = join(self.root, day, 'video')
+        if not exists(dirname):
+            makedirs(dirname)
+        filename = join(dirname, timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv'))
         if not output_needed:
             self.lookbehind.append(frame)
             return True
