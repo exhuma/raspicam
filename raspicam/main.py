@@ -58,7 +58,7 @@ class Application:
 
     def run_webui(self):
         self.init()
-        app = make_app(self.frames, self.config)
+        app = make_app(detect(self.frames, self.storage), self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):

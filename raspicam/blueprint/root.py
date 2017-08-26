@@ -3,7 +3,7 @@ from glob import glob
 from time import sleep
 from flask import Blueprint, render_template, current_app, Response
 
-from raspicam.processing import detect, as_jpeg
+from raspicam.processing import as_jpeg
 
 ROOT = Blueprint('root', __name__)
 
@@ -52,5 +52,5 @@ def file_feed():
 
 @ROOT.route('/live_feed')
 def video_feed():
-    return Response(multipart_stream(detect(current_app.camera)),
+    return Response(multipart_stream(current_app.frame_generator),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
