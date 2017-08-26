@@ -1,6 +1,4 @@
 import logging
-import picamera
-import picamera.array
 from abc import ABCMeta, abstractmethod
 
 import cv2
@@ -17,8 +15,11 @@ class Camera(metaclass=ABCMeta):
 
 class USBCam(Camera):
 
+    def __init__(self, index=-1):
+        self.index = index
+
     def frame_generator(self):
-        video = cv2.VideoCapture(-1)
+        video = cv2.VideoCapture(self.index)
         if not video.isOpened():
             raise Exception('Unable to open camera')
         while True:
@@ -30,6 +31,8 @@ class USBCam(Camera):
 class PiCamera(Camera):
 
     def frame_generator(self):
+        import picamera
+        import picamera.array
         with picamera.PiCamera() as camera:
             with picamera.array.PiRGBArray(camera) as output:
                 camera.resolution = (640, 480)

@@ -1,66 +1,84 @@
-"""
-Flask application which serves a motion-JPEG stream.
-"""
-from datetime import datetime
-from glob import glob
-from os.path import join
-from time import sleep
+import logging
 
-from flask import Flask, render_template, Response
-from gouge.colourcli import Simple
+from config_resolver import Config
+import cv2
 
-from processing import detect
+from camera import USBCam, PiCamera
+from processing import  detect
+
+from raspicam.storage import Storage, NullStorage
+from raspicam.webui import make_app
 
 
-app = Flask(__name__)
-
-def multipart_stream(frame_generator):
-    """
-    Wrap each item from a generator with HTTP Multipart metadata. This is required for Motion-JPEG.
-
-    Example::
-
-        >>> frames = my_generator()
-        >>> wrapped_generator = multipart_stream(frames)
-        >>> for frame in wrapped_generator:
-        ...     print(frame[:20])
-
-    :param frame_generator: A generater which generates image frames as *bytes* objects
-    :return: A new, wrapped stream of bytes
-    """
-    for output in frame_generator:
-        yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n'
-               b'\r\n' + output + b'\r\n'
-               b'\r\n')
+LOG = logging.getLogger(__name__)
 
 
-def filereader():
-    while True:
-        now = datetime.now()
-        dirname = now.strftime('%Y-%m-%d')
-        fname = sorted(glob('%s/*.jpg' % dirname))[-1]
-        with open(fname, 'rb') as fp:
-            yield fp.read()
-            sleep(0.5)
+class Application:
 
+    def __init__(self, config):
+        self.config = config
+        self.initialised = False
+        self.frames = iter([])
+        self.storage = NullStorage()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+    def init(self):
+        if not self.initialised:
+            self.storage = Storage.from_config(self.config)
+            self.frames = self._get_framesource()
+            self.initialised = True
+            LOG.info('Application successfully initialised.')
 
+    def _get_framesource(self):
+        kind = self.config.get('framesource', 'kind').lower()
+        raw_arguments = self.config.get('framesource', 'arguments', default='')
+        if raw_arguments.strip():
+            arguments = [arg.strip() for arg in raw_arguments.split(',')]
+        else:
+            arguments = []
+        if kind == 'usb':
+            if len(arguments) == 0:
+                index = -1
+            else:
+                index = int(arguments[0])
+            return USBCam(index).frame_generator()
+        elif kind == 'raspberrypi':
+            return PiCamera().frame_generator()
+        else:
+            raise ValueError('%s is an unsupported frame source!')
 
-@app.route('/file_feed')
-def file_feed():
-    return Response(multipart_stream(filereader()),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    def run_gui(self):
+        self.init()
+        for frame in detect(self.frames, self.storage):
+            cv2.imshow('frame', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        # When everything done, release the capture
+        # cap.release()
+        cv2.destroyAllWindows()
 
+    def run_webui(self):
+        self.init()
+        app = make_app(detect(self.frames, self.storage), self.config)
+        app.run(host='0.0.0.0', debug=True, threaded=True)
 
-@app.route('/live_feed')
-def video_feed():
-    return Response(multipart_stream(detect()),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    def run_cli(self):
+        self.init()
+        for frame in detect(self.frames, self.storage):
+            pass
 
-if __name__ == '__main__':
-    Simple.basicConfig(level=0)
-    app.run(host='0.0.0.0', debug=True)
+if __name__ == "__main__":
+    import sys
+
+    logging.basicConfig(level=0)
+    config = Config('exhuma', 'raspicam', require_load=True)
+    ui = sys.argv[1]
+    app = Application(config)
+
+    if ui == 'cli':
+        app.run_cli()
+    elif ui == 'webui':
+        app.run_webui()
+    elif ui == 'gui':
+        app.run_gui()
+    else:
+        print("ui must be cli, webui or gui")

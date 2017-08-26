@@ -3,63 +3,21 @@ This module contains various functions which process image objects.
 """
 
 import logging
-from collections import namedtuple, deque
 from datetime import datetime, timedelta
 from os import makedirs
 from os.path import join, exists
 
 import cv2
 import numpy as np
-from camera import PiCamera
+
+from raspicam.storage import NullStorage
+from raspicam.localtypes import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)
 MIN_SNAPSHOT_INTERVAL = timedelta(seconds=5)
-Point2D = namedtuple('Point2D', 'x y')
-Dimension = namedtuple('Dimension', 'width height')
 
 
-class VideoStorage:
-
-    def __init__(self):
-        self.video_length = video_length = 200
-        self.lookbehind = deque(maxlen=video_length)
-        self.lookahead = deque(maxlen=video_length)
-        self.dimension = Dimension(100, 100)
-
-    def write(self, frame, output_needed):
-        self.dimension = Dimension(frame.shape[1], frame.shape[0])
-        timestamp = datetime.now()
-        folder = timestamped_folder(timestamp, 'videos')
-        filename = join(folder, timestamp.strftime('%Y-%m-%dT%H.%M.%S.mkv'))
-        if not output_needed:
-            self.lookbehind.append(frame)
-            return True
-        else:
-            LOG.debug('Video dump requested, %d frames in buffer, filling up lookahead: %d/%d',
-                len(self.lookbehind), len(self.lookahead), self.video_length)
-            self.lookahead.append(frame)
-        if len(self.lookahead) == self.lookahead.maxlen:
-            LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',
-                     len(self.lookbehind), len(self.lookahead))
-            writer = cv2.VideoWriter(
-                filename,
-                cv2.VideoWriter_fourcc(*'H264'),
-                10.0,
-                (self.dimension.width, self.dimension.height),
-                True)
-            # lookahead is full. Write result to disk
-            for stored_frame in self.lookbehind:
-                writer.write(stored_frame)
-            for stored_frame in self.lookahead:
-                writer.write(stored_frame)
-            writer.release()
-            self.lookbehind.clear()
-            self.lookahead.clear()
-            return True
-        return False
-
-        
 def as_jpeg(image):
     """
     Takes a OpenCV image and converts it to a JPEG image
@@ -168,7 +126,7 @@ def warmup(frame_generator, iterations=20):
             image,
             'Warming up... [%d/%d]' % (i, iterations),
             'settling cam...')
-        yield as_jpeg(with_text)
+        yield with_text
     LOG.info('Warmup done!')
 
 
@@ -219,37 +177,7 @@ def find_motion_regions(reference, current):
     return contours[1:], [frame_delta, thresh, dilated]
 
 
-def timestamped_folder(timestamp=None, subdir=''):
-    timestamp = timestamp or datetime.now()
-    dirname = timestamp.strftime('%Y-%m-%d')
-    if subdir:
-        dirname = join(dirname, subdir)
-    if not exists(dirname):
-        makedirs(dirname)
-    return dirname
-
-
-def write_snapshot(timestamp, image, ref_timestamp=None, subdir=''):
-    dirname = timestamped_folder(timestamp, subdir)
-    ts_text = timestamp.strftime('%Y-%m-%dT%H.%M')
-    filename = join(
-        dirname, ts_text + '.jpg')
-    if exists(filename):
-        LOG.debug('Skipping existing file %s', filename)
-        return
-    if ref_timestamp:
-        ref_header = ref_timestamp.strftime("Reference @ %H:%M:%S")
-    else:
-        ref_header = ''
-    with_text = add_text(
-        image,
-        ref_header,
-        timestamp.strftime("%A, %Y-%m-%d %H:%M:%S"))
-    cv2.imwrite(filename, with_text)
-    LOG.info('Snapshot written to %s', filename)
-
-
-def detect():
+def detect(frame_generator, storage=None):
     """
     Run motion detection.
     
@@ -257,21 +185,20 @@ def detect():
     
     :return: A stream of bytes objects
     """
-    cam = PiCamera()
-    generator = cam.frame_generator()
-    storage = VideoStorage()
 
-    for frame in warmup(generator):
+    storage = storage or NullStorage()
+
+    for frame in warmup(frame_generator):
         yield frame
 
-    first_frame = next(generator)
+    first_frame = next(frame_generator)
     _, reference = prepare_frame(first_frame)
     last_ref_taken = last_snap_taken = last_debug_taken = current_time = datetime.now()
-    write_snapshot(current_time, first_frame, None, 'reference')
+    storage.write_snapshot(current_time, first_frame, None, 'reference')
     refstatus = 'initial frame'
     video_output_needed = False
 
-    for frame in generator:
+    for frame in frame_generator:
         text = 'no motion detected'
         resized, current = prepare_frame(frame)
         current_time = datetime.now()
@@ -290,7 +217,7 @@ def detect():
                 is_new_reference(reference, current)):
             reference = current
             last_ref_taken = current_time
-            write_snapshot(current_time, frame, None, 'reference')
+            storage.write_snapshot(current_time, frame, None, 'reference')
             refstatus = 'ref @ %s' % last_ref_taken
             LOG.debug('Reference updated @ %s', last_ref_taken)
         modified = resized.copy()
@@ -309,7 +236,7 @@ def detect():
                 cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 2)
             time_since_snap = current_time - last_snap_taken
             if time_since_snap > MIN_SNAPSHOT_INTERVAL:
-                write_snapshot(current_time, modified, last_ref_taken)
+                storage.write_snapshot(current_time, modified, last_ref_taken)
                 last_snap_taken = current_time
 
         combined = combine(
@@ -319,11 +246,11 @@ def detect():
             modified
         )
 
-        video_storage_finished = storage.write(combined, video_output_needed)
+        video_storage_finished = storage.write_video(combined, video_output_needed)
         video_output_needed = not video_storage_finished
 
         with_text = add_text(combined,
                              "Status: {}, ref: {}".format(text, refstatus),
                              current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
-        yield as_jpeg(with_text)
+        yield with_text
