@@ -139,7 +139,7 @@ def prepare_frame(frame):
     '''
     resized = cv2.resize(frame, (320, 240))
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-    output = cv2.GaussianBlur(gray, (21, 21), 0)
+    output = cv2.GaussianBlur(gray, (11, 11), 0)
     return resized, output
 
 
