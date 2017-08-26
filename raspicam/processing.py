@@ -152,12 +152,14 @@ def find_motion_regions(fgbg, current):
     '''
 
     fgmask = fgbg.apply(current)
+    shadows = cv2.inRange(fgmask, 127, 127) == 255
+    without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
     _, contours, _ = cv2.findContours(
-        fgmask,
+        without_shadows,
         cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE)
     contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-    return contours, [fgmask]
+    return contours, [current, without_shadows]
 
 
 def detect(frame_generator, storage=None):
@@ -202,8 +204,8 @@ def detect(frame_generator, storage=None):
                 last_snap_taken = current_time
 
         combined = combine(
-            current,
             intermediaries[0],
+            intermediaries[1],
             resized,
             modified
         )
