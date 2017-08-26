@@ -8,14 +8,25 @@ from processing import  detect
 from raspicam.webui import make_app
 
 
+LOG = logging.getLogger(__name__)
+
+
 class Application:
 
     def __init__(self, config):
         self.config = config
-        self.frame_generator = USBCam().frame_generator()
+        self.initialised = False
+        self.frames = []
+
+    def init(self):
+        if not self.initialised:
+            self.frames = USBCam().frame_generator()
+            self.initialised = True
+            LOG.info('Application successfully initialised.')
 
     def run_gui(self):
-        for frame in detect(self.frame_generator):
+        self.init()
+        for frame in detect(self.frames):
             cv2.imshow('frame', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -24,11 +35,11 @@ class Application:
         cv2.destroyAllWindows()
 
     def run_webui(self):
-        app = make_app(self.frame_generator, self.config)
+        app = make_app(self.frames, self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
-        for frame in detect(self.frame_generator):
+        for frame in detect(self.frames):
             pass
 
 logging.basicConfig(level=0)
