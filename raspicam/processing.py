@@ -136,12 +136,13 @@ def find_motion_regions(fgbg, current, mask):
     The second part of the returned tuple is a list of intermediate images.
     '''
 
-    if current.shape != mask.shape:
+    if mask and current.shape != mask.shape:
         LOG.warning('Mask has differend dimensions than the processed image. It should be %s but is %s', current.shape, mask.shape)
         mask = cv2.resize(mask, current.shape)
-
-    mask = cv2.inRange(mask, 0, 0) != 0
-    masked_current = np.ma.masked_array(current, mask=mask, fill_value=0).filled()
+        mask = cv2.inRange(mask, 0, 0) != 0
+        masked_current = np.ma.masked_array(current, mask=mask, fill_value=0).filled()
+    else:
+        masked_current = current
 
     fgmask = fgbg.apply(masked_current)
     shadows = cv2.inRange(fgmask, 127, 127) == 255
