@@ -10,6 +10,7 @@ from os.path import join, exists
 import cv2
 import numpy as np
 
+from raspicam.operations import blit, tile
 from raspicam.storage import NullStorage
 from raspicam.localtypes import Dimension, Point2D
 
@@ -28,22 +29,6 @@ def as_jpeg(image):
     ret, jpeg = cv2.imencode('.jpg', image)
     output = jpeg.tostring()
     return output
-
-
-def blit(canvas, image, size: Dimension, offset: Point2D):
-    """
-    Resizes an image and copies the resized result onto a canvas at position *offset* with size *size*.
-    
-    NOTE: The image in *canvas* will be modified in-place!
-    
-    Example::
-    
-        >>> canvas = np.zeros((100, 100, 3), np.uint8)
-        >>> block = np.ones((100, 100, 3), np.uint8)
-        >>> blit(canvas, block, Dimension(20, 20), Point2D(10, 10))
-    """
-    canvas[offset.y:size.height+offset.y,
-    offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
 def combine(current, foreground, unmodified, modified):
@@ -213,12 +198,8 @@ def detect(frame_generator, storage=None, mask=None):
                 storage.write_snapshot(current_time, modified)
                 last_snap_taken = current_time
 
-        combined = combine(
-            intermediaries[0],
-            intermediaries[1],
-            resized,
-            modified
-        )
+        combined = tile([intermediaries[0], intermediaries[1], resized, modified],
+                        rows=2, cols=2)
 
         video_storage_finished = storage.write_video(combined, video_output_needed)
         video_output_needed = not video_storage_finished
