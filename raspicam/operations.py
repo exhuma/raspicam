@@ -36,6 +36,11 @@ def tile(images, cols=3, rows=3, tilesize=Dimension(320, 240), gap=5):
     for i, image in enumerate(images):
         padded_position = Point2D((current_col * tilesize.width) + (gap * (current_col + 1)),
                                   current_row * tilesize.height + (gap * (current_row + 1)))
+        if ((padded_position.x + tilesize.width + gap > width) or
+                (padded_position.y + tilesize.height + gap > height)):
+            LOG.error('Unable to fit all images on the tiled canvas! Increas column number, '
+                      'row number or decrease tilesize!')
+            continue
         LOG.debug('Blitting image of dimension %r to %r', tilesize, padded_position)
         if len(image.shape) == 2:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
