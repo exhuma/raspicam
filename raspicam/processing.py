@@ -158,9 +158,17 @@ def find_motion_regions(fgbg, current, mask):
 def detect(frame_generator, storage=None, mask=None):
     """
     Run motion detection.
-    
-    This will open the Raspberry PI camera and return a stream of JPEG images as bytes objects.
-    
+
+    This will open the Raspberry PI camera and return a stream of JPEG images as
+    bytes objects.
+
+    :param frame_generator: A stream/iterable of frames.
+    :param storage: An instance of a storage class. If ``None``, don't store
+        anything
+    :param mask: An black/white image which will be used as mask for each frame.
+        Black pixels will be ignored in motion detection, white pixels will be
+        kept.
+
     :return: A stream of bytes objects
     """
 
