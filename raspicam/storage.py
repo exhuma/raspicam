@@ -34,6 +34,7 @@ class Storage(metaclass=ABCMeta):
     def from_config(config):
         root = config.get('storage', 'root', default='')
         if not root:
+            LOG.warning('No option storage.root in config file. Storage disabled!')
             return NullStorage()
 
         instance = DiskStorage()

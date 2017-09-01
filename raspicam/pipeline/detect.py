@@ -1,22 +1,72 @@
+import logging
+from collections import namedtuple
+
 from raspicam.localtypes import Dimension
 
 import cv2
+import numpy as np
+
+
+LOG = logging.getLogger(__name__)
+MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions')
 
 
 def resizer(dimension):
     def fun(frame):
-        return cv2.resize(frame, dimension)
+        return MutatorOutput([cv2.resize(frame, dimension)], [])
     return fun
 
 
 def togray(frame):
-    return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    return MutatorOutput([cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)], [])
 
 
 def blur(pixels):
     def fun(frame):
-        return cv2.GaussianBlur(frame, (pixels, pixels), 0)
+        return MutatorOutput([cv2.GaussianBlur(frame, (pixels, pixels), 0)], [])
     return fun
+
+def masker(mask_filename):
+
+    LOG.debug('Setting mask to %s', mask_filename)
+    if not mask_filename:
+        return lambda frame: MutatorOutput([frame], [])
+
+    mask = cv2.imread(mask_filename, 0)
+
+    def fun(frame):
+
+        if len(frame.shape) == 3:
+            LOG.warning('Unable to apply the mask to a color image. Convert to B/W first!')
+            return MutatorOutput([frame], [])
+
+        if frame.shape != mask.shape:
+            LOG.warning('Mask has differend dimensions than the processed image. '
+                        'It should be %s but is %s', frame.shape, mask.shape)
+            resized_mask = mask.resize(mask, frame.shape)
+        else:
+            resized_mask = mask
+        bitmask = cv2.inRange(resized_mask, 0, 0) != 0
+        output = np.ma.masked_array(frame, mask=bitmask, fill_value=0).filled()
+        return MutatorOutput([output], [])
+    return fun
+
+
+class MotionDetector:
+
+    def __init__(self):
+        self.fgbg = cv2.createBackgroundSubtractorMOG2()
+
+    def __call__(self, frame):
+        fgmask = self.fgbg.apply(frame)
+        shadows = cv2.inRange(fgmask, 127, 127) == 255
+        without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
+        _, contours, _ = cv2.findContours(
+            without_shadows,
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE)
+        contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
+        return MutatorOutput([without_shadows, frame], contours)
 
 
 class DetectionPipeline:
@@ -32,11 +82,15 @@ class DetectionPipeline:
     def __init__(self, operations):
         self.operations = operations
         self.intermediate_frames = []
+        self.motion_callbacks = []
 
     def feed(self, frame):
-        self.intermediate_frames.append(frame)
         del self.intermediate_frames[:]
         for func in self.operations:
-            frame = func(frame)
-            self.intermediate_frames.append(frame)
+            output = func(frame)
+            frame = output.intermediate_frames[-1]
+            self.intermediate_frames.extend(output.intermediate_frames)
+            if output.motion_regions:
+                for callback in self.motion_callbacks:
+                    callback(output.motion_regions)
         return frame

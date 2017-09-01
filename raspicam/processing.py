@@ -11,18 +11,19 @@ import cv2
 import numpy as np
 
 from raspicam.operations import blit, tile
+from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector
+from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
 from raspicam.localtypes import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)
-MIN_SNAPSHOT_INTERVAL = timedelta(seconds=5)
 
 
 def as_jpeg(image):
     """
     Takes a OpenCV image and converts it to a JPEG image
-    
+
     :param image:  The OpenCV image
     :return: a bytes object
     """
@@ -34,11 +35,11 @@ def as_jpeg(image):
 def add_text(image, header, footer):
     """
     Add a header and footer to an image.
-    
+
     Example::
-    
+
         >>> new_image = add_text(old_image, 'Hello', 'world!')
-        
+
     :param image: The original image
     :param header:  The header text
     :param footer:  The footer text
@@ -87,20 +88,6 @@ def warmup(frame_generator, iterations=20):
     LOG.info('Warmup done!')
 
 
-def prepare_frame(frame):
-    '''
-    Prepares a frame for all comparison operations.
-
-    For this only resizes and blurs it. But this could in the future also apply
-    masks and whatnot. The general idea is to remove any unwanted data (noise)
-    from the frame which we do not want to consider in motion detection.
-    '''
-    resized = cv2.resize(frame, (320, 240))
-    gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
-    output = cv2.GaussianBlur(gray, (11, 11), 0)
-    return resized, output
-
-
 def find_motion_regions(fgbg, current, mask):
     '''
     Returns a list of OpenCV contours of areas where motion was detected.
@@ -109,13 +96,7 @@ def find_motion_regions(fgbg, current, mask):
     The second part of the returned tuple is a list of intermediate images.
     '''
 
-    if mask and current.shape != mask.shape:
-        LOG.warning('Mask has differend dimensions than the processed image. It should be %s but is %s', current.shape, mask.shape)
-        mask = cv2.resize(mask, current.shape)
-        mask = cv2.inRange(mask, 0, 0) != 0
-        masked_current = np.ma.masked_array(current, mask=mask, fill_value=0).filled()
-    else:
-        masked_current = current
+    # TODO apply mask
 
     fgmask = fgbg.apply(masked_current)
     shadows = cv2.inRange(fgmask, 127, 127) == 255
@@ -128,58 +109,65 @@ def find_motion_regions(fgbg, current, mask):
     return contours, [masked_current, without_shadows]
 
 
-def detect(frame_generator, storage=None, mask=None):
+def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
+           report_pipeline=None):
     """
     Run motion detection.
-    
-    This will open the Raspberry PI camera and return a stream of JPEG images as bytes objects.
-    
+
+    This will open the Raspberry PI camera and return a stream of JPEG images as
+    bytes objects.
+
+    :param frame_generator: A stream/iterable of frames.
+    :param storage: An instance of a storage class. If ``None``, don't store
+        anything
+    :param mask: An black/white image which will be used as mask for each frame.
+        Black pixels will be ignored in motion detection, white pixels will be
+        kept.
+    :param detection_pipeline: A pipeline object which gets executed for each
+        frame and is responsible to report motion.
+    :param report_pipeline: A pipeline object which gets executed for each frame
+        which contains motion.
+
     :return: A stream of bytes objects
     """
 
     storage = storage or NullStorage()
-
+    report_pipeline = report_pipeline or ReportPipeline.make_default(
+        timedelta(seconds=5),
+        storage
+    )
+    detection_pipeline = detection_pipeline or DetectionPipeline.make_default()
     if mask:
-        mask = cv2.imread(mask, 0)
+        detection_pipeline.operations.append(masker(mask))
+    detection_pipeline.operations.append(MotionDetector())
+    detection_pipeline.motion_callbacks.append(lambda x: print(x))
 
     for frame in warmup(frame_generator):
         yield frame
 
     fgbg = cv2.createBackgroundSubtractorMOG2()
 
-    last_snap_taken = last_debug_taken = current_time = datetime.now()
-    video_output_needed = False
-
     for frame in frame_generator:
-        text = 'no motion detected'
-        resized, current = prepare_frame(frame)
+        modified = detection_pipeline.feed(frame)
         current_time = datetime.now()
-        modified = resized.copy()
 
-        contours, intermediaries = find_motion_regions(fgbg, current, mask)
+        # contours, intermediaries = find_motion_regions(fgbg, current, mask)
 
-        if contours:
-            text = 'motion detected'
-            video_output_needed = True
-            LOG.debug('Motion detected in %d regions', len(contours))
+        # if contours:
+        #     LOG.debug('Motion detected in %d regions', len(contours))
 
-            for contour in contours:
-                x, y, w, h = cv2.boundingRect(contour)
-                cv2.rectangle(modified, (x, y), (x + w, y + h), (0, 255, 0), 1)
+        #     motion_rects = []
+        #     for contour in contours:
+        #         x, y, w, h = cv2.boundingRect(contour)
+        #        motion_rects.append((Point2D(x, y), Dimension(w, h)))
 
-            time_since_snap = current_time - last_snap_taken
-            if time_since_snap > MIN_SNAPSHOT_INTERVAL:
-                storage.write_snapshot(current_time, modified)
-                last_snap_taken = current_time
+        #     report_pipeline.feed(current_time, frame, resized, motion_rects)
 
-        combined = tile([intermediaries[0], intermediaries[1], resized, modified],
-                        rows=2, cols=2)
+        # combined = tile([intermediaries[0], intermediaries[1], resized, modified],
+        #                 rows=2, cols=2)
 
-        video_storage_finished = storage.write_video(combined, video_output_needed)
-        video_output_needed = not video_storage_finished
+        # with_text = add_text(combined,
+        #                      "Status: {}".format(text),
+        #                      current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
 
-        with_text = add_text(combined,
-                             "Status: {}".format(text),
-                             current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-
-        yield with_text
+        yield tile(detection_pipeline.intermediate_frames)

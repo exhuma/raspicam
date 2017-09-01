@@ -18,8 +18,10 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
         >>> block = np.ones((100, 100, 3), np.uint8)
         >>> blit(canvas, block, Dimension(20, 20), Point2D(10, 10))
     """
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     canvas[offset.y:size.height+offset.y,
-    offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
+           offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
 def tile(images, cols=3, rows=3, tilesize=Dimension(320, 240), gap=5):
