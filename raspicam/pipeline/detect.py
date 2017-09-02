@@ -12,29 +12,30 @@ MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions'
 
 
 def resizer(dimension):
-    def fun(frame):
-        return MutatorOutput([cv2.resize(frame, dimension)], [])
+    def fun(frames):
+        return MutatorOutput([cv2.resize(frames[-1], dimension)], [])
     return fun
 
 
-def togray(frame):
-    return MutatorOutput([cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)], [])
+def togray(frames):
+    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], [])
 
 
 def blur(pixels):
-    def fun(frame):
-        return MutatorOutput([cv2.GaussianBlur(frame, (pixels, pixels), 0)], [])
+    def fun(frames):
+        return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], [])
     return fun
 
 def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frame: MutatorOutput([frame], [])
+        return lambda frames: MutatorOutput([frames[-1]], [])
 
     mask = cv2.imread(mask_filename, 0)
 
-    def fun(frame):
+    def fun(frames):
+        frame = frames[-1]
 
         if len(frame.shape) == 3:
             LOG.warning('Unable to apply the mask to a color image. Convert to B/W first!')
@@ -57,8 +58,8 @@ class MotionDetector:
     def __init__(self):
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
 
-    def __call__(self, frame):
-        fgmask = self.fgbg.apply(frame)
+    def __call__(self, frames):
+        fgmask = self.fgbg.apply(frames[-1])
         shadows = cv2.inRange(fgmask, 127, 127) == 255
         without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
         _, contours, _ = cv2.findContours(
@@ -66,7 +67,7 @@ class MotionDetector:
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-        return MutatorOutput([without_shadows, frame], contours)
+        return MutatorOutput([without_shadows, frames[-1]], contours)
 
 
 class DetectionPipeline:
@@ -86,8 +87,9 @@ class DetectionPipeline:
 
     def feed(self, frame):
         del self.intermediate_frames[:]
+        self.intermediate_frames.append(frame)
         for func in self.operations:
-            output = func(frame)
+            output = func(self.intermediate_frames)
             frame = output.intermediate_frames[-1]
             self.intermediate_frames.extend(output.intermediate_frames)
             if output.motion_regions:
