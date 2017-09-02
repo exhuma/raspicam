@@ -88,25 +88,6 @@ def warmup(frame_generator, iterations=20):
     LOG.info('Warmup done!')
 
 
-def find_motion_regions(fgbg, current, mask):
-    '''
-    Returns a list of OpenCV contours of areas where motion was detected.
-    If the list is empty, no motion was detected.
-
-    The second part of the returned tuple is a list of intermediate images.
-    '''
-
-    # TODO apply mask
-
-    fgmask = fgbg.apply(masked_current)
-    shadows = cv2.inRange(fgmask, 127, 127) == 255
-    without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
-    _, contours, _ = cv2.findContours(
-        without_shadows,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE)
-    contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-    return contours, [masked_current, without_shadows]
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
@@ -145,29 +126,6 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     for frame in warmup(frame_generator):
         yield frame
 
-    fgbg = cv2.createBackgroundSubtractorMOG2()
-
     for frame in frame_generator:
-        modified = detection_pipeline.feed(frame)
-        current_time = datetime.now()
-
-        # contours, intermediaries = find_motion_regions(fgbg, current, mask)
-
-        # if contours:
-        #     LOG.debug('Motion detected in %d regions', len(contours))
-
-        #     motion_rects = []
-        #     for contour in contours:
-        #         x, y, w, h = cv2.boundingRect(contour)
-        #        motion_rects.append((Point2D(x, y), Dimension(w, h)))
-
-        #     report_pipeline.feed(current_time, frame, resized, motion_rects)
-
-        # combined = tile([intermediaries[0], intermediaries[1], resized, modified],
-        #                 rows=2, cols=2)
-
-        # with_text = add_text(combined,
-        #                      "Status: {}".format(text),
-        #                      current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-
+        detection_pipeline.feed(frame)
         yield tile(detection_pipeline.intermediate_frames)
