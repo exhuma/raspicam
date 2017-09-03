@@ -127,7 +127,6 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     if mask:
         detection_pipeline.operations.append(masker(mask))
     detection_pipeline.operations.append(MotionDetector())
-    detection_pipeline.motion_callbacks.append(lambda x: print(x))
     detection_pipeline.operations.append(text_adder)
 
     for frame in warmup(frame_generator):
