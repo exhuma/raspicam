@@ -13,24 +13,24 @@ MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions'
 
 def resizer(dimension):
     def fun(frames, motion_regions):
-        return MutatorOutput([cv2.resize(frames[-1], dimension)], [])
+        return MutatorOutput([cv2.resize(frames[-1], dimension)], motion_regions)
     return fun
 
 
 def togray(frames, motion_regions):
-    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], [])
+    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], motion_regions)
 
 
 def blur(pixels):
     def fun(frames, motion_regions):
-        return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], [])
+        return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], motion_regions)
     return fun
 
 def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames, motion_regions: MutatorOutput([frames[-1]], [])
+        return lambda frames, motion_regions: MutatorOutput([frames[-1]], motion_regions)
 
     mask = cv2.imread(mask_filename, 0)
 
@@ -49,7 +49,7 @@ def masker(mask_filename):
             resized_mask = mask
         bitmask = cv2.inRange(resized_mask, 0, 0) != 0
         output = np.ma.masked_array(frame, mask=bitmask, fill_value=0).filled()
-        return MutatorOutput([output], [])
+        return MutatorOutput([output], motion_regions)
     return fun
 
 

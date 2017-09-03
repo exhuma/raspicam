@@ -93,7 +93,7 @@ def text_adder(frames, motion_regions):
     with_text = add_text(frames[1],
                          'Hello',
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-    return MutatorOutput([with_text], [])
+    return MutatorOutput([with_text], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
