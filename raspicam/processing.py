@@ -88,7 +88,7 @@ def warmup(frame_generator, iterations=20):
     LOG.info('Warmup done!')
 
 
-def text_adder(frames):
+def text_adder(frames, motion_regions):
     current_time = datetime.now()
     with_text = add_text(frames[1],
                          'Hello',

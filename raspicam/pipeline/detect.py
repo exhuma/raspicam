@@ -12,17 +12,17 @@ MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions'
 
 
 def resizer(dimension):
-    def fun(frames):
+    def fun(frames, motion_regions):
         return MutatorOutput([cv2.resize(frames[-1], dimension)], [])
     return fun
 
 
-def togray(frames):
+def togray(frames, motion_regions):
     return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], [])
 
 
 def blur(pixels):
-    def fun(frames):
+    def fun(frames, motion_regions):
         return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], [])
     return fun
 
@@ -30,11 +30,11 @@ def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames: MutatorOutput([frames[-1]], [])
+        return lambda frames, motion_regions: MutatorOutput([frames[-1]], [])
 
     mask = cv2.imread(mask_filename, 0)
 
-    def fun(frames):
+    def fun(frames, motion_regions):
         frame = frames[-1]
 
         if len(frame.shape) == 3:
@@ -58,7 +58,7 @@ class MotionDetector:
     def __init__(self):
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
 
-    def __call__(self, frames):
+    def __call__(self, frames, motion_regions):
         fgmask = self.fgbg.apply(frames[-1])
         shadows = cv2.inRange(fgmask, 127, 127) == 255
         without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
@@ -88,9 +88,11 @@ class DetectionPipeline:
     def feed(self, frame):
         del self.intermediate_frames[:]
         self.intermediate_frames.append(frame)
+        motion_regions = []
         for func in self.operations:
-            output = func(self.intermediate_frames)
+            output = func(self.intermediate_frames, motion_regions)
             frame = output.intermediate_frames[-1]
+            motion_regions = output.motion_regions
             self.intermediate_frames.extend(output.intermediate_frames)
             if output.motion_regions:
                 for callback in self.motion_callbacks:
