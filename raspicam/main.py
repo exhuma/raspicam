@@ -4,6 +4,7 @@ from config_resolver import Config
 import cv2
 
 from camera import USBCam, PiCamera
+from raspicam.source import FileReader
 from processing import  detect
 
 from raspicam.storage import Storage, NullStorage
@@ -45,6 +46,9 @@ class Application:
             return USBCam(index).frame_generator()
         elif kind == 'raspberrypi':
             return PiCamera().frame_generator()
+        elif kind == 'file':
+            filename = arguments[0]
+            return FileReader(filename).frame_generator()
         else:
             raise ValueError('%s is an unsupported frame source!')
 
