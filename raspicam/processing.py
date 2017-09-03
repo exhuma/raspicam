@@ -96,6 +96,12 @@ def text_adder(frames, motion_regions):
     return MutatorOutput([with_text], motion_regions)
 
 
+def disk_writer(frames, motion_regions):
+    if motion_regions:
+        print('would write to disk')
+    return MutatorOutput(frames[-1], motion_regions)
+
+
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
            report_pipeline=None):
     """
@@ -119,15 +125,12 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     """
 
     storage = storage or NullStorage()
-    report_pipeline = report_pipeline or ReportPipeline.make_default(
-        timedelta(seconds=5),
-        storage
-    )
     detection_pipeline = detection_pipeline or DetectionPipeline.make_default()
     if mask:
         detection_pipeline.operations.append(masker(mask))
     detection_pipeline.operations.append(MotionDetector())
     detection_pipeline.operations.append(text_adder)
+    detection_pipeline.operations.append(disk_writer)
 
     for frame in warmup(frame_generator):
         yield frame
