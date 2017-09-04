@@ -31,33 +31,6 @@ def as_jpeg(image):
     return output
 
 
-def combine(current, foreground, unmodified, modified):
-    """
-    Tile 4 images onto one big canvas.
-    
-    :param current: The image that is currently in use for detection
-    :param foreground: The result of foreground detection
-    :param unmodified: The frame as seen by the camera
-    :param modified: With debug information
-    :return: A new canvas with those 4 images tiled
-    """
-
-    # make a canvas big enough for 2x2 images of 320x240 and 10px offset
-    width = 320 * 2 + 30
-    height = 240 * 2 + 30
-    canvas = np.zeros((height, width, 3), np.uint8)
-
-    current = cv2.cvtColor(current, cv2.COLOR_GRAY2RGB)
-    foreground = cv2.cvtColor(foreground, cv2.COLOR_GRAY2RGB)
-
-    blit(canvas, current, Dimension(320, 240), Point2D(10, 10))
-    blit(canvas, foreground, Dimension(320, 240), Point2D(320+20, 10))
-    blit(canvas, unmodified, Dimension(320, 240), Point2D(10, 240+20))
-    blit(canvas, modified, Dimension(320, 240), Point2D(320+20, 240+20))
-
-    return canvas
-
-
 def add_text(image, header, footer):
     """
     Add a header and footer to an image.

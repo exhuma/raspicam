@@ -32,7 +32,12 @@ class Storage(metaclass=ABCMeta):
 
     @staticmethod
     def from_config(config):
+        root = config.get('storage', 'root', default='')
+        if not root:
+            return NullStorage()
+
         instance = DiskStorage()
+        instance.root = root
         video_length = int(
             config.get('storage', 'num_context_frames', default=200))
         instance.video_length = video_length
