@@ -9,15 +9,16 @@ LOG = logging.getLogger(__name__)
 def blit(canvas, image, size: Dimension, offset: Point2D):
     """
     Resizes an image and copies the resized result onto a canvas at position *offset* with size *size*.
-    
+
     NOTE: The image in *canvas* will be modified in-place!
-    
+
     Example::
-    
+
         >>> canvas = np.zeros((100, 100, 3), np.uint8)
         >>> block = np.ones((100, 100, 3), np.uint8)
         >>> blit(canvas, block, Dimension(20, 20), Point2D(10, 10))
     """
+    LOG.debug('Blitting image of dimension %r to %r', size, offset)
     if len(image.shape) == 2:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     canvas[offset.y:size.height+offset.y,
@@ -43,7 +44,6 @@ def tile(images, cols=3, rows=3, tilesize=Dimension(320, 240), gap=5):
             LOG.error('Unable to fit all images on the tiled canvas! Increas column number, '
                       'row number or decrease tilesize!')
             continue
-        LOG.debug('Blitting image of dimension %r to %r', tilesize, padded_position)
         if len(image.shape) == 2:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         blit(canvas, image, tilesize, padded_position)
