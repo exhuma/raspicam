@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 
 from raspicam.operations import blit, tile
-from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector, MutatorOutput, box_drawer
+from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector, MutatorOutput, box_drawer, file_extractor
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
 from raspicam.localtypes import Dimension, Point2D

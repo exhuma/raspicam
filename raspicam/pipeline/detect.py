@@ -71,6 +71,13 @@ class MotionDetector:
         return MutatorOutput([without_shadows, frames[-1]], contours)
 
 
+def file_extractor(filename):
+    def extract(frames, motion_regions):
+        cv2.imwrite(filename, frames[-1])
+        return MutatorOutput(frames, motion_regions)
+    return extract
+
+
 def box_drawer(ref_index=1):
     def draw_bounding_boxes(frames, motion_regions):
         modified = frames[ref_index].copy()
