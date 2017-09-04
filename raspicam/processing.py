@@ -99,7 +99,7 @@ def text_adder(frames, motion_regions):
 def disk_writer(frames, motion_regions):
     if motion_regions:
         print('would write to disk')
-    return MutatorOutput(frames[-1], motion_regions)
+    return MutatorOutput([frames[-1]], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
