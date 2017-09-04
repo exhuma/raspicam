@@ -71,6 +71,14 @@ class MotionDetector:
         return MutatorOutput([without_shadows, frames[-1]], contours)
 
 
+def draw_bounding_boxes(frames, motion_regions):
+    modified = frames[1].copy()
+    for contour in motion_regions:
+        x, y, w, h = cv2.boundingRect(contour)
+        cv2.rectangle(modified, (x, y), (x+w, y+h), (0, 255, 0), 1)
+    return MutatorOutput([modified], motion_regions)
+
+
 class DetectionPipeline:
 
     @staticmethod

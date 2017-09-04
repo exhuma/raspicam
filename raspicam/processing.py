@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 
 from raspicam.operations import blit, tile
-from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector, MutatorOutput
+from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector, MutatorOutput, draw_bounding_boxes
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
 from raspicam.localtypes import Dimension, Point2D
@@ -90,7 +90,7 @@ def warmup(frame_generator, iterations=20):
 
 def text_adder(frames, motion_regions):
     current_time = datetime.now()
-    with_text = add_text(frames[1],
+    with_text = add_text(frames[-1],
                          'Hello',
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
     return MutatorOutput([with_text], motion_regions)
@@ -129,6 +129,7 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     if mask:
         detection_pipeline.operations.append(masker(mask))
     detection_pipeline.operations.append(MotionDetector())
+    detection_pipeline.operations.append(draw_bounding_boxes)
     detection_pipeline.operations.append(text_adder)
     detection_pipeline.operations.append(disk_writer)
 
