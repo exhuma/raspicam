@@ -26,6 +26,7 @@ def blur(pixels):
         return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], motion_regions)
     return fun
 
+
 def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
