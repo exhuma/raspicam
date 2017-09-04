@@ -68,7 +68,7 @@ class MotionDetector:
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-        return MutatorOutput([without_shadows, frames[-1]], contours)
+        return MutatorOutput([fgmask, without_shadows], contours)
 
 
 def file_extractor(filename):
