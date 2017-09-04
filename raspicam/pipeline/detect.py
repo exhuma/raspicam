@@ -40,7 +40,7 @@ def masker(mask_filename):
 
         if len(frame.shape) == 3:
             LOG.warning('Unable to apply the mask to a color image. Convert to B/W first!')
-            return MutatorOutput([frame], [])
+            return MutatorOutput([frame], motion_regions)
 
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed image. '
