@@ -5,16 +5,23 @@ This module contains various functions which process image objects.
 import logging
 from datetime import datetime, timedelta
 from os import makedirs
-from os.path import join, exists
+from os.path import exists, join
 
 import cv2
-import numpy as np
 
+import numpy as np
+from raspicam.localtypes import Dimension, Point2D
 from raspicam.operations import blit, tile
-from raspicam.pipeline.detect import DetectionPipeline, masker, MotionDetector, MutatorOutput, box_drawer, file_extractor
+from raspicam.pipeline.detect import (
+    DetectionPipeline,
+    MotionDetector,
+    MutatorOutput,
+    box_drawer,
+    file_extractor,
+    masker
+)
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
-from raspicam.localtypes import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)

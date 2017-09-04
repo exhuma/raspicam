@@ -1,11 +1,10 @@
 import logging
 from collections import namedtuple
 
-from raspicam.localtypes import Dimension
-
 import cv2
-import numpy as np
 
+import numpy as np
+from raspicam.localtypes import Dimension
 
 LOG = logging.getLogger(__name__)
 MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions')

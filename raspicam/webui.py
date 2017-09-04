@@ -2,8 +2,9 @@
 Flask application which serves a motion-JPEG stream.
 """
 
-from flask import Flask, render_template, Response
+from flask import Flask, Response, render_template
 from raspicam.blueprint.root import ROOT
+
 
 def make_app(frame_generator, config):
     app = Flask(__name__)

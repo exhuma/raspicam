@@ -2,11 +2,10 @@ import logging
 from abc import ABCMeta, abstractmethod
 from collections import deque
 from datetime import datetime
+from os import getcwd, makedirs
+from os.path import exists, join
 
 import cv2
-from os import getcwd, makedirs
-
-from os.path import join, exists
 
 from raspicam.localtypes import Dimension
 

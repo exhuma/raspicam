@@ -1,15 +1,13 @@
 import logging
 
-from config_resolver import Config
 import cv2
 
-from camera import USBCam, PiCamera
+from config_resolver import Config
+from processing import detect
+from raspicam.camera import PiCamera, USBCam
 from raspicam.source import FileReader
-from processing import  detect
-
-from raspicam.storage import Storage, NullStorage
+from raspicam.storage import NullStorage, Storage
 from raspicam.webui import make_app
-
 
 LOG = logging.getLogger(__name__)
 

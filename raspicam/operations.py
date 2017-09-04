@@ -1,7 +1,9 @@
 import logging
+
+import cv2
+
 import numpy as np
 from raspicam.localtypes import Dimension, Point2D
-import cv2
 
 LOG = logging.getLogger(__name__)
 

@@ -11,13 +11,12 @@ import re
 from math import atan2
 from statistics import mean
 
-from raspicam.localtypes import Dimension, Point2D
-
 import cv2
-import numpy as np
-import pytesseract
 from PIL import Image
 
+import numpy as np
+import pytesseract
+from raspicam.localtypes import Dimension, Point2D
 
 P_PLATE = re.compile(r'[A-Z]{2} [0-9]{4}')
 

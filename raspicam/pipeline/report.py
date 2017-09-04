@@ -52,5 +52,3 @@ class ReportPipeline:
             pipeline_args = func(*pipeline_args)
             self.intermediate_frames.append(pipeline_args[0])
         return pipeline_args[0]
-
-

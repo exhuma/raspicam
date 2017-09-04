@@ -1,5 +1,6 @@
-import cv2
 import logging
+
+import cv2
 
 LOG = logging.getLogger(__name__)
 
