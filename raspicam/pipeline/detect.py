@@ -100,14 +100,6 @@ def box_drawer(target_frame_index, source_frame_index=None):
 
 class DetectionPipeline:
 
-    @staticmethod
-    def make_default():
-        return DetectionPipeline([
-            resizer(Dimension(320, 240)),
-            togray,
-            blur(11),
-        ])
-
     def __init__(self, operations):
         self.operations = operations
         self.intermediate_frames = []

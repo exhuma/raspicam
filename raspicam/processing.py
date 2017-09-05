@@ -18,7 +18,10 @@ from raspicam.pipeline.detect import (
     MutatorOutput,
     box_drawer,
     file_extractor,
-    masker
+    masker,
+    resizer,
+    togray,
+    blur,
 )
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
@@ -160,16 +163,23 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     """
 
     storage = storage or NullStorage()
-    detection_pipeline = detection_pipeline or DetectionPipeline.make_default()
-    if mask:
-        detection_pipeline.operations.append(masker(mask))
-    detection_pipeline.operations.append(MotionDetector())
-    detection_pipeline.operations.append(box_drawer(0, 1))
-    detection_pipeline.operations.append(text_adder)
-    detection_pipeline.operations.append(DiskWriter(
-        timedelta(seconds=5),
-        storage,
-    ))
+    if detection_pipeline:
+        detection_pipeline = detection_pipeline
+    else:
+        detection_pipeline = DetectionPipeline([
+            resizer(Dimension(640, 480)),
+            togray,
+            blur(11),
+            MotionDetector(),
+            box_drawer(0, 1),
+            text_adder,
+            DiskWriter(
+                timedelta(seconds=5),
+                storage,
+            )
+        ])
+        if mask:
+            detection_pipeline.operations.insert(2, masker(mask))
 
     for frame in warmup(frame_generator):
         yield frame
