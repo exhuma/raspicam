@@ -22,6 +22,7 @@ from raspicam.pipeline.detect import (
     resizer,
     togray,
     blur,
+    tiler,
 )
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
@@ -176,7 +177,8 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
             DiskWriter(
                 timedelta(seconds=5),
                 storage,
-            )
+            ),
+            tiler(cols=3, tilesize=Dimension(640, 480))
         ])
         if mask:
             detection_pipeline.operations.insert(2, masker(mask))

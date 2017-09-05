@@ -5,9 +5,17 @@ import cv2
 
 import numpy as np
 from raspicam.localtypes import Dimension
+from raspicam.operations import tile
 
 LOG = logging.getLogger(__name__)
 MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions')
+
+
+def tiler(**kwargs):
+    def fun(frames, motion_regions):
+        output = tile(frames, **kwargs)
+        return MutatorOutput([output], motion_regions)
+    return fun
 
 
 def resizer(dimension):
