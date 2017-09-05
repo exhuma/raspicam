@@ -53,7 +53,7 @@ class Application:
     def run_gui(self):
         self.init()
         for frame in detect(self.frames, self.storage, self.mask):
-            cv2.imshow('frame', frame)
+            cv2.imshow('RaspiCam Main Window', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         # When everything done, release the capture
