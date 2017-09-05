@@ -49,7 +49,7 @@ def masker(mask_filename):
             resized_mask = mask
         bitmask = cv2.inRange(resized_mask, 0, 0) != 0
         output = np.ma.masked_array(frame, mask=bitmask, fill_value=0).filled()
-        return MutatorOutput([output], motion_regions)
+        return MutatorOutput([resized_mask, output], motion_regions)
     return fun
 
 
