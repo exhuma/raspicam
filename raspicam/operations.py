@@ -29,7 +29,11 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
            offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
 
-def tile(images, cols=3, rows=3, tilesize=Dimension(320, 240), gap=5):
+def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
+
+    rows = len(images) // cols
+    if len(images) % cols != 0:
+        rows += 1
 
     width = (tilesize.width * cols) + (gap * (cols+1))
     height = (tilesize.height * rows) + (gap * (rows+1))
