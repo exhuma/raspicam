@@ -21,8 +21,10 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
         >>> blit(canvas, block, Dimension(20, 20), Point2D(10, 10))
     """
     LOG.debug('Blitting image of dimension %r to %r', size, offset)
-    if len(image.shape) == 2:
+    if len(image.shape) == 2 and len(canvas.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    elif len(image.shape) == 3 and len(canvas.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     canvas[offset.y:size.height+offset.y,
            offset.x:size.width + offset.x] = cv2.resize(image, (size.width, size.height))
 
