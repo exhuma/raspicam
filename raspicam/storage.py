@@ -26,7 +26,7 @@ class Storage(metaclass=ABCMeta):
     def write_video(self, frame, output_needed):
         raise NotImplementedError('Not yet implemented')
 
-    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+    def write_snapshot(self, timestamp, image, subdir=''):
         raise NotImplementedError('Not yet implemented')
 
     @staticmethod
@@ -110,7 +110,7 @@ class DiskStorage(Storage):
             return True
         return False
 
-    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+    def write_snapshot(self, timestamp, image, subdir=''):
         dirname = join(self.root, timestamp.strftime('%Y-%m-%d'), 'images')
         if subdir:
             dirname = join(dirname, subdir)
@@ -132,5 +132,5 @@ class NullStorage(Storage):
     def write_video(self, frame, output_needed):
         LOG.debug('Writing video frame to NullStorage')
 
-    def write_snapshot(self, timestamp, image, ref_timestamp=None, subdir=''):
+    def write_snapshot(self, timestamp, image, subdir=''):
         LOG.debug('Writing image frame to NullStorage')
