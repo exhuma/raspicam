@@ -176,4 +176,4 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
 
     for frame in frame_generator:
         detection_pipeline.feed(frame)
-        yield tile(detection_pipeline.intermediate_frames)
+        yield detection_pipeline.output

@@ -102,6 +102,10 @@ class DetectionPipeline:
         self.intermediate_frames = []
         self.motion_callbacks = []
 
+    @property
+    def output(self):
+        return self.intermediate_frames[-1]
+
     def feed(self, frame):
         del self.intermediate_frames[:]
         self.intermediate_frames.append(frame)
