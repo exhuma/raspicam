@@ -106,8 +106,13 @@ class DetectionPipeline:
         del self.intermediate_frames[:]
         self.intermediate_frames.append(frame)
         motion_regions = []
-        for func in self.operations:
-            output = func(self.intermediate_frames, motion_regions)
+        for i, func in enumerate(self.operations):
+            try:
+                output = func(self.intermediate_frames, motion_regions)
+            except Exception:
+                LOG.critical('Exception raise at pipeline position %d in '
+                             'function %s', i, func)
+                raise
             frame = output.intermediate_frames[-1]
             motion_regions = output.motion_regions
             self.intermediate_frames.extend(output.intermediate_frames)
