@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from raspicam.localtypes import Dimension, Point2D
 from raspicam.operations import blit, tile
-from raspicam.pipeline.detect import (
+from raspicam.pipeline import (
     DetectionPipeline,
     MotionDetector,
     MutatorOutput,
@@ -24,7 +24,6 @@ from raspicam.pipeline.detect import (
     tiler,
     togray
 )
-from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)
@@ -141,8 +140,7 @@ class DiskWriter:
         return MutatorOutput([frames[-1]], motion_regions)
 
 
-def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
-           report_pipeline=None):
+def detect(frame_generator, storage=None, mask=None, detection_pipeline=None):
     """
     Run motion detection.
 
@@ -157,8 +155,6 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
         kept.
     :param detection_pipeline: A pipeline object which gets executed for each
         frame and is responsible to report motion.
-    :param report_pipeline: A pipeline object which gets executed for each frame
-        which contains motion.
 
     :return: A stream of bytes objects
     """
