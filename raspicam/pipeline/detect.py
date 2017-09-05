@@ -44,7 +44,7 @@ def masker(mask_filename):
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed image. '
                         'It should be %s but is %s', frame.shape, mask.shape)
-            resized_mask = mask.resize(mask, frame.shape)
+            resized_mask = cv2.resize(mask, frame.shape)
         else:
             resized_mask = mask
         bitmask = cv2.inRange(resized_mask, 0, 0) != 0
