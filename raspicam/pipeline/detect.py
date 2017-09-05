@@ -77,11 +77,22 @@ def file_extractor(filename):
     return extract
 
 
-def box_drawer(ref_index=1):
+def box_drawer(target_frame_index, source_frame_index=None):
     def draw_bounding_boxes(frames, motion_regions):
-        modified = frames[ref_index].copy()
+        if source_frame_index:
+            src_shape = frames[source_frame_index].shape
+            dst_shape = frames[target_frame_index].shape
+            width_ratio = 1 / (src_shape[1] / dst_shape[1])
+            height_ratio = 1 / (src_shape[0] / dst_shape[0])
+
+        modified = frames[target_frame_index].copy()
         for contour in motion_regions:
             x, y, w, h = cv2.boundingRect(contour)
+            if source_frame_index:
+                x = int(x * width_ratio)
+                w = int(w * width_ratio)
+                y = int(y * height_ratio)
+                h = int(h * height_ratio)
             cv2.rectangle(modified, (x, y), (x+w, y+h), (0, 255, 0), 1)
         return MutatorOutput([modified], motion_regions)
     return draw_bounding_boxes

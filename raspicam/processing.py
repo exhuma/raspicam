@@ -164,7 +164,7 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     if mask:
         detection_pipeline.operations.append(masker(mask))
     detection_pipeline.operations.append(MotionDetector())
-    detection_pipeline.operations.append(box_drawer(1))
+    detection_pipeline.operations.append(box_drawer(0, 1))
     detection_pipeline.operations.append(text_adder)
     detection_pipeline.operations.append(DiskWriter(
         timedelta(seconds=5),
