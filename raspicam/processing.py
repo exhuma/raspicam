@@ -16,13 +16,13 @@ from raspicam.pipeline.detect import (
     DetectionPipeline,
     MotionDetector,
     MutatorOutput,
+    blur,
     box_drawer,
     file_extractor,
     masker,
     resizer,
-    togray,
-    blur,
     tiler,
+    togray
 )
 from raspicam.pipeline.report import ReportPipeline
 from raspicam.storage import NullStorage
