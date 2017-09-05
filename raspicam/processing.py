@@ -103,10 +103,33 @@ def text_adder(frames, motion_regions):
     return MutatorOutput([with_text], motion_regions)
 
 
-def disk_writer(frames, motion_regions):
-    if motion_regions:
-        print('would write to disk')
-    return MutatorOutput([frames[-1]], motion_regions)
+class DiskWriter:
+
+    def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
+        self.interval = interval
+        self.storage = storage
+        self.last_image_written = datetime(1970, 1, 1)
+        self.pipeline_index = pipeline_index
+        self.subdir = subdir
+
+    def __call__(self, frames, motion_regions):
+
+        if not motion_regions:
+            return MutatorOutput([frames[-1]], motion_regions)
+
+        now = datetime.now()
+        if now - self.last_image_written < self.interval:
+            return MutatorOutput([frames[-1]], motion_regions)
+
+        self.last_image_written = now
+
+        self.storage.write_snapshot(
+            now,
+            frames[self.pipeline_index],
+            subdir=self.subdir
+        )
+
+        return MutatorOutput([frames[-1]], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
@@ -138,7 +161,10 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     detection_pipeline.operations.append(MotionDetector())
     detection_pipeline.operations.append(box_drawer(1))
     detection_pipeline.operations.append(text_adder)
-    detection_pipeline.operations.append(disk_writer)
+    detection_pipeline.operations.append(DiskWriter(
+        timedelta(seconds=5),
+        storage,
+    ))
 
     for frame in warmup(frame_generator):
         yield frame
