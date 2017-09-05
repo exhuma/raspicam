@@ -114,6 +114,11 @@ class DiskWriter:
 
     def __call__(self, frames, motion_regions):
 
+        self.storage.write_video(
+            frames[self.pipeline_index],
+            bool(motion_regions)
+        )
+
         if not motion_regions:
             return MutatorOutput([frames[-1]], motion_regions)
 
