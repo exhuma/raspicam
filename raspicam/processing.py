@@ -62,26 +62,39 @@ def add_text(image, header, footer):
         height, width = image.shape
         canvas_args = [width]
 
-    title_offset = 20
-    new_height = height + (2 * title_offset)
+    font_face = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1
+    thickness = 1
+    padding = 10
+
+    h_size, h_baseline = cv2.getTextSize(
+        header, font_face, font_scale, thickness)
+    h_size = Dimension(h_size[0], h_size[1] + h_baseline)
+
+    f_size, f_baseline = cv2.getTextSize(
+        footer, font_face, font_scale, thickness)
+    f_size = Dimension(f_size[0], f_size[1] + f_baseline)
+
+    new_height = height + h_size.height + (4*padding) + f_size.height
     canvas = np.zeros((new_height, *canvas_args), np.uint8)
 
-    blit(canvas, image, Dimension(width, height), Point2D(0, title_offset))
+    blit(canvas, image, Dimension(width, height),
+         Point2D(0, h_size.height + (2*padding)))
 
     cv2.putText(canvas,
                 header,
-                (10, 20),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-                2)
+                (padding, h_size.height - h_baseline + padding),
+                font_face,
+                font_scale,
+                (255, 255, 255),
+                thickness)
     cv2.putText(canvas,
                 footer,
-                (10, canvas.shape[0] - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (0, 0, 255),
-                1)
+                (padding, canvas.shape[0] - f_baseline - padding),
+                font_face,
+                font_scale,
+                (255, 255, 255),
+                thickness)
 
     return canvas
 
