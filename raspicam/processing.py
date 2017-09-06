@@ -112,9 +112,10 @@ def warmup(frame_generator, iterations=20):
 
 
 def text_adder(frames, motion_regions):
+    text = 'Motion detected' if motion_regions else 'No motion'
     current_time = datetime.now()
     with_text = add_text(frames[-1],
-                         'Hello',
+                         text,
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
     return MutatorOutput([with_text], motion_regions)
 
