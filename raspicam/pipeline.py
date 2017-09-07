@@ -1,3 +1,11 @@
+"""
+This module contains the main "DetectionPipeline" class which is the workhorse
+of this application. It represents a series of operations which are applied to
+each video frame.
+
+For more details, see :py:class:`~.DetectionPipeline`
+"""
+
 import logging
 from collections import namedtuple
 
@@ -12,6 +20,15 @@ MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions'
 
 
 def tiler(**kwargs):
+    '''
+    Creates a new pipeline operation to tile images.
+
+    The created operation creates a new frame which tiles each intermediate
+    frame.
+
+    :param kwargs: keyword arguments which are delegated to
+        :py:func:`raspicam.operations.tile`
+    '''
     def fun(frames, motion_regions):
         output = tile(frames, **kwargs)
         return MutatorOutput([output], motion_regions)
@@ -19,22 +36,60 @@ def tiler(**kwargs):
 
 
 def resizer(dimension):
+    '''
+    Creates a new pipeline operation which resizes a frame to *dimension*.
+
+    :param dimension: The target dimension of the frame
+    '''
     def fun(frames, motion_regions):
         return MutatorOutput([cv2.resize(frames[-1], dimension)], motion_regions)
     return fun
 
 
 def togray(frames, motion_regions):
+    '''
+    Converts a frame to grayscale
+    '''
     return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], motion_regions)
 
 
 def blur(pixels):
+    '''
+    Creates a new pipeline operation which blurs the frame by *pixels*.
+
+    .. note::
+        OpenCV does not accept each value. From my educated guess, even values
+        will not work!
+
+    :param dimension: The target dimension of the frame.
+    '''
     def fun(frames, motion_regions):
         return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], motion_regions)
     return fun
 
 
 def masker(mask_filename):
+    '''
+    Creates a new pipeline operation which applies a mask taken from
+    *mask_filename* to the image. The image should be black/white only. Black
+    pixels will be converted to black in the resulting frame, white pixels will
+    let the original frame data "shine through".
+
+    This is a simple binary operation. Either the pixel is masked or not. Alpha
+    levels are not supported!
+
+    This mutator will generate one additional intermediate frame, containing the
+    mask.
+
+    .. note::
+
+        For performance reason, the mask should have the same dimension as the
+        frame it is applied to. If this is not the case, the mask will be
+        automatically resized, but a warning message will be logged, informing
+        you about the expected dimension.
+
+    :param mask_filename: The filename of the image to be used as mask.
+    '''
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
@@ -62,6 +117,18 @@ def masker(mask_filename):
 
 
 class MotionDetector:
+    '''
+    Creates a new pipeline operation which highlights pixels in which motions
+    are detected.
+
+    This will generate two frames (one intermediary, and one output frame)
+    containing the frame *with* shadows, and one with shadows *removed*. In both
+    frames, pixels with motion have the value 255, shadows use 127, and no
+    motion is represented by the value 0.
+
+    In addition, this operator will also generate motion regions in the output.
+    These regions are standard OpenCV contours.
+    '''
 
     def __init__(self):
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
@@ -79,6 +146,12 @@ class MotionDetector:
 
 
 def file_extractor(filename):
+    '''
+    Creates a new pipeline operation which simply writes the current frame out
+    to the specified *filename*. No modification is done.
+
+    If the file already exists, it will be overwritten.
+    '''
     def extract(frames, motion_regions):
         cv2.imwrite(filename, frames[-1])
         return MutatorOutput(frames, motion_regions)
@@ -86,6 +159,23 @@ def file_extractor(filename):
 
 
 def box_drawer(target_frame_index, source_frame_index=None):
+    '''
+    Creates a new pipeline operation which draws bounding boxes around the
+    motion regions fed into the operation. The boxes are drawn on top of the
+    frame which is at index *target_frame_index* in the pipeline operations. The
+    debug mode can be useful to determine the index.
+
+    In case the regions were created from a frame with *different* dimensions as
+    the target frame, the boxes need to be projected onto the target frame. In
+    such a case, simply define the frame index of the frame which was used to
+    generate the regions using *source_frame_index* and the boxes will
+    automatically be projected.
+
+    :param target_frame_index: The index of the frame on which the boxes should
+        be drawn to.
+    :param source_frame_index: The index of the frame which generated the motion
+        regions.
+    '''
     def draw_bounding_boxes(frames, motion_regions):
         if source_frame_index:
             src_shape = frames[source_frame_index].shape
@@ -107,6 +197,32 @@ def box_drawer(target_frame_index, source_frame_index=None):
 
 
 class DetectionPipeline:
+    '''
+    The main pipeline container.
+
+    Instances of this object can be fed frames. Each frame fed into the pipeline
+    will have all *operations* applied to in order. Each operation output (and
+    optional intermediate frames) are stored in *intermediate_frames*. The first
+    frame will always be the original input frame, the last frame will always
+    represent the pipeline output.
+
+    The output is also directly accessible via the *output* property.
+
+    Additionally, in case of detected motion, each function on
+    *motion_callbacks* will be called in order, receiving an array of OpenCV
+    contour objects which contained motion.
+
+    Example::
+
+        >>> pipe = DetectionPipeline([
+        ...     resizer(Dimension(320, 240))
+        ...     togray,
+        ... ])
+        >>> pipe.motion_callbacks.append(lambda contours: print(len(contours)))
+        >>> for frame in my_frames:
+        ...     pipe.feed(frame)
+        ...     print(pipe.output.shape)
+    '''
 
     def __init__(self, operations):
         self.operations = operations
@@ -115,9 +231,19 @@ class DetectionPipeline:
 
     @property
     def output(self):
+        '''
+        Delegate to the output frame of the pipeline.
+        '''
         return self.intermediate_frames[-1]
 
     def feed(self, frame):
+        '''
+        Inject a new frame into the pipeline. Each pipeline operation will be
+        applied to this frame, and each intermediate frame will be stored in
+        *intermediate_frames*.
+
+        :return: The final resulting frame
+        '''
         del self.intermediate_frames[:]
         self.intermediate_frames.append(frame)
         motion_regions = []
