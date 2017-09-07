@@ -1,3 +1,6 @@
+'''
+This module contains helper methods for the project.
+'''
 import logging
 
 import cv2
@@ -10,7 +13,8 @@ LOG = logging.getLogger(__name__)
 
 def blit(canvas, image, size: Dimension, offset: Point2D):
     """
-    Resizes an image and copies the resized result onto a canvas at position *offset* with size *size*.
+    Resizes an image and copies the resized result onto a canvas at position
+    *offset* with size *size*.
 
     NOTE: The image in *canvas* will be modified in-place!
 
@@ -31,6 +35,16 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
 
 
 def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
+    '''
+    Creates a new image where each image in *frames* is represented as tile.
+
+    :param images: A collection of images (as numpy arrays)
+    :param cols: The number of columns in the resulting image. Rows are added
+        automatically on overflow.
+    :param tilesize: The size of each tile.
+    :param gap: The padding between each tile.
+    :returns: A new OpenCV image array.
+    '''
 
     rows = len(images) // cols
     if len(images) % cols != 0:
