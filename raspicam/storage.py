@@ -33,7 +33,8 @@ class Storage(metaclass=ABCMeta):
     def from_config(config):
         root = config.get('storage', 'root', default='')
         if not root:
-            LOG.warning('No option storage.root in config file. Storage disabled!')
+            LOG.warning('No option storage.root in config file. '
+                        'Storage disabled!')
             return NullStorage()
 
         instance = DiskStorage()
@@ -80,14 +81,18 @@ class DiskStorage(Storage):
         dirname = join(self.root, day, 'video')
         if not exists(dirname):
             makedirs(dirname)
-        basename = timestamp.strftime('%Y-%m-%dT%H.%M.%S') + self.video_extension
+        basename = timestamp.strftime(
+            '%Y-%m-%dT%H.%M.%S') + self.video_extension
         absname = join(dirname, basename)
         if not output_needed:
             self.lookbehind.append(frame)
             return True
         else:
-            LOG.debug('Video dump requested, %d frames in buffer, filling up lookahead: %d/%d',
-                      len(self.lookbehind), len(self.lookahead), self.video_length)
+            LOG.debug('Video dump requested, %d frames in buffer, '
+                      'filling up lookahead: %d/%d',
+                      len(self.lookbehind),
+                      len(self.lookahead),
+                      self.video_length)
             self.lookahead.append(frame)
         if len(self.lookahead) == self.lookahead.maxlen:
             LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',

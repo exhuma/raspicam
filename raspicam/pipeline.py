@@ -16,7 +16,8 @@ from raspicam.localtypes import Dimension
 from raspicam.operations import tile
 
 LOG = logging.getLogger(__name__)
-MutatorOutput = namedtuple('MutatorOutput', 'intermediate_frames motion_regions')
+MutatorOutput = namedtuple(
+    'MutatorOutput', 'intermediate_frames motion_regions')
 
 
 def tiler(**kwargs):
@@ -42,7 +43,8 @@ def resizer(dimension):
     :param dimension: The target dimension of the frame
     '''
     def fun(frames, motion_regions):
-        return MutatorOutput([cv2.resize(frames[-1], dimension)], motion_regions)
+        return MutatorOutput([cv2.resize(frames[-1], dimension)],
+                             motion_regions)
     return fun
 
 
@@ -50,7 +52,8 @@ def togray(frames, motion_regions):
     '''
     Converts a frame to grayscale
     '''
-    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)], motion_regions)
+    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)],
+                         motion_regions)
 
 
 def blur(pixels):
@@ -64,7 +67,9 @@ def blur(pixels):
     :param dimension: The target dimension of the frame.
     '''
     def fun(frames, motion_regions):
-        return MutatorOutput([cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)], motion_regions)
+        return MutatorOutput(
+            [cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)],
+            motion_regions)
     return fun
 
 
@@ -93,7 +98,8 @@ def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames, motion_regions: MutatorOutput([frames[-1]], motion_regions)
+        return lambda frames, motion_regions: MutatorOutput([frames[-1]],
+                                                            motion_regions)
 
     mask = cv2.imread(mask_filename, 0)
 
@@ -101,12 +107,14 @@ def masker(mask_filename):
         frame = frames[-1]
 
         if len(frame.shape) == 3:
-            LOG.warning('Unable to apply the mask to a color image. Convert to B/W first!')
+            LOG.warning('Unable to apply the mask to a color image. '
+                        'Convert to B/W first!')
             return MutatorOutput([frame], motion_regions)
 
         if frame.shape != mask.shape:
-            LOG.warning('Mask has differend dimensions than the processed image. '
-                        'It should be %s but is %s', frame.shape, mask.shape)
+            LOG.warning('Mask has differend dimensions than the processed '
+                        'image. It should be %s but is %s',
+                        frame.shape, mask.shape)
             resized_mask = cv2.resize(mask, (frame.shape[1], frame.shape[0]))
         else:
             resized_mask = mask
@@ -136,7 +144,8 @@ class MotionDetector:
     def __call__(self, frames, motion_regions):
         fgmask = self.fgbg.apply(frames[-1])
         shadows = cv2.inRange(fgmask, 127, 127) == 255
-        without_shadows = np.ma.masked_array(fgmask, mask=shadows, fill_value=0).filled()
+        without_shadows = np.ma.masked_array(
+            fgmask, mask=shadows, fill_value=0).filled()
         _, contours, _ = cv2.findContours(
             without_shadows,
             cv2.RETR_EXTERNAL,

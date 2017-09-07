@@ -17,6 +17,7 @@ class FileReader:
         while True:
             success, image = video.read()
             if not success:
-                LOG.info('Unable to read frame from %s. Might have reached end of file!' % self.filename)
+                LOG.info('Unable to read frame from %s. Might have reached '
+                         'end of file!' % self.filename)
                 return None
             yield image
