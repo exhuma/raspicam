@@ -1,4 +1,5 @@
 import logging
+from argparse import ArgumentParser
 
 import cv2
 
@@ -14,20 +15,48 @@ LOG = logging.getLogger(__name__)
 
 class Application:
 
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = None
         self.initialised = False
         self.frames = iter([])
         self.mask = None
         self.storage = NullStorage()
+        self.__verbosity = 0
+        self.__stream = []
 
-    def init(self):
+    def init(self, cli_args=None):
+        cli_args = cli_args or []
         if not self.initialised:
+            args = self.parse_args(cli_args)
+            self.config = Config('exhuma', 'raspicam', require_load=True)
             self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
             self.mask = self.config.get('detection', 'mask', default=None)
+            self.verbosity = args.verbosity
+            self.__stream = detect(self.frames, self.storage, self.mask,
+                                   debug=args.debug)
             self.initialised = True
             LOG.info('Application successfully initialised.')
+            return args
+
+    def parse_args(self, cli_args):
+        parser = ArgumentParser()
+        parser.add_argument('ui', help='Chose a UI. One of [gui, web, cli]')
+        parser.add_argument('-d', '--debug', action='store_true', default=False,
+                            help='Enable debug mode')
+        parser.add_argument('-v', dest='verbosity', action='count', default=0,
+                            help='Increase log verbosity')
+        return parser.parse_args(cli_args)
+
+    @property
+    def verbosity(self):
+        return self.__verbosity
+
+    @verbosity.setter
+    def verbosity(self, value):
+        self.__verbosity = value
+        logger = logging.getLogger()
+        logger.setLevel(max(0, logging.CRITICAL - (10 * value)))
 
     def _get_framesource(self):
         kind = self.config.get('framesource', 'kind').lower()
@@ -51,8 +80,7 @@ class Application:
             raise ValueError('%s is an unsupported frame source!')
 
     def run_gui(self):
-        self.init()
-        for frame in detect(self.frames, self.storage, self.mask):
+        for frame in self.__stream:
             cv2.imshow('RaspiCam Main Window', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -61,28 +89,25 @@ class Application:
         cv2.destroyAllWindows()
 
     def run_webui(self):
-        self.init()
-        app = make_app(detect(self.frames, self.storage, self.mask), self.config)
+        app = make_app(self.__stream, self.config)
         app.run(host='0.0.0.0', debug=True, threaded=True)
 
     def run_cli(self):
-        self.init()
-        for frame in detect(self.frames, self.storage, self.mask):
+        for frame in self.__stream:
             pass
 
 if __name__ == "__main__":
     import sys
 
-    logging.basicConfig(level=0)
-    config = Config('exhuma', 'raspicam', require_load=True)
-    ui = sys.argv[1]
-    app = Application(config)
+    logging.basicConfig(level=logging.CRITICAL)
+    app = Application()
+    args = app.init(sys.argv[1:])
 
-    if ui == 'cli':
+    if args.ui == 'cli':
         app.run_cli()
-    elif ui == 'webui':
+    elif args.ui == 'webui':
         app.run_webui()
-    elif ui == 'gui':
+    elif args.ui == 'gui':
         app.run_gui()
     else:
         print("ui must be cli, webui or gui")

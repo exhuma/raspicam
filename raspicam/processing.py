@@ -154,7 +154,8 @@ class DiskWriter:
         return MutatorOutput([frames[-1]], motion_regions)
 
 
-def detect(frame_generator, storage=None, mask=None, detection_pipeline=None):
+def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
+           debug=False):
     """
     Run motion detection.
 
@@ -169,6 +170,7 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None):
         kept.
     :param detection_pipeline: A pipeline object which gets executed for each
         frame and is responsible to report motion.
+    :param debug: If set to True, show intermediate frames as tiles.
 
     :return: A stream of bytes objects
     """
@@ -188,8 +190,10 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None):
                 timedelta(seconds=5),
                 storage,
             ),
-            tiler(cols=3, tilesize=Dimension(640, 480))
         ])
+        if debug:
+            detection_pipeline.operations.append(
+                tiler(cols=4, tilesize=Dimension(640, 480)))
         if mask:
             detection_pipeline.operations.insert(2, masker(mask))
 
