@@ -31,6 +31,7 @@ def tiler(**kwargs):
         :py:func:`raspicam.operations.tile`
     '''
     def fun(frames, motion_regions):
+        # pylint: disable=missing-docstring
         output = tile(frames, **kwargs)
         return MutatorOutput([output], motion_regions)
     return fun
@@ -43,6 +44,7 @@ def resizer(dimension):
     :param dimension: The target dimension of the frame
     '''
     def fun(frames, motion_regions):
+        # pylint: disable=missing-docstring
         return MutatorOutput([cv2.resize(frames[-1], dimension)],
                              motion_regions)
     return fun
@@ -67,6 +69,7 @@ def blur(pixels):
     :param dimension: The target dimension of the frame.
     '''
     def fun(frames, motion_regions):
+        # pylint: disable=missing-docstring
         return MutatorOutput(
             [cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)],
             motion_regions)
@@ -104,6 +107,7 @@ def masker(mask_filename):
     mask = cv2.imread(mask_filename, 0)
 
     def fun(frames, motion_regions):
+        # pylint: disable=missing-docstring
         frame = frames[-1]
 
         if len(frame.shape) == 3:
@@ -162,6 +166,7 @@ def file_extractor(filename):
     If the file already exists, it will be overwritten.
     '''
     def extract(frames, motion_regions):
+        # pylint: disable=missing-docstring
         cv2.imwrite(filename, frames[-1])
         return MutatorOutput(frames, motion_regions)
     return extract
@@ -186,6 +191,7 @@ def box_drawer(target_frame_index, source_frame_index=None):
         regions.
     '''
     def draw_bounding_boxes(frames, motion_regions):
+        # pylint: disable=missing-docstring
         if source_frame_index:
             src_shape = frames[source_frame_index].shape
             dst_shape = frames[target_frame_index].shape
