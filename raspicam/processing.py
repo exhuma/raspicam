@@ -19,8 +19,8 @@ from raspicam.pipeline import (
     masker,
     resizer,
     tiler,
-    togray
-)
+    togray,
+    InterFrame)
 from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)
@@ -124,10 +124,10 @@ def text_adder(frames, motion_regions):
     '''
     text = 'Motion detected' if motion_regions else 'No motion'
     current_time = datetime.now()
-    with_text = add_text(frames[-1],
+    with_text = add_text(frames[-1].image,
                          text,
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-    return MutatorOutput([with_text], motion_regions)
+    return MutatorOutput([InterFrame(with_text, 'text_adder')], motion_regions)
 
 
 class DiskWriter:
@@ -142,12 +142,14 @@ class DiskWriter:
     :param subdir: Optional sub-directory name for snapshots.
     '''
 
-    def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
+    def __init__(self, interval, storage, pipeline_index=-1, subdir='',
+                 label='DiskWriter'):
         self.interval = interval
         self.storage = storage
         self.last_image_written = datetime(1970, 1, 1)
         self.pipeline_index = pipeline_index
         self.subdir = subdir
+        self.label = label
 
     def __call__(self, frames, motion_regions):
 
