@@ -167,7 +167,7 @@ def file_extractor(filename):
     def extract(frames, motion_regions):
         # pylint: disable=missing-docstring
         cv2.imwrite(filename, frames[-1])
-        return MutatorOutput(frames, motion_regions)
+        return MutatorOutput([], motion_regions)
     return extract
 
 
