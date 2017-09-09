@@ -12,7 +12,6 @@ from collections import namedtuple
 import cv2
 
 import numpy as np
-from raspicam.localtypes import Dimension
 from raspicam.operations import tile
 
 LOG = logging.getLogger(__name__)

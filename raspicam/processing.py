@@ -4,21 +4,18 @@ This module contains various functions which process image objects.
 
 import logging
 from datetime import datetime, timedelta
-from os import makedirs
-from os.path import exists, join
 
 import cv2
 
 import numpy as np
 from raspicam.localtypes import Dimension, Point2D
-from raspicam.operations import blit, tile
+from raspicam.operations import blit
 from raspicam.pipeline import (
     DetectionPipeline,
     MotionDetector,
     MutatorOutput,
     blur,
     box_drawer,
-    file_extractor,
     masker,
     resizer,
     tiler,

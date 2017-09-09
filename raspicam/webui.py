@@ -2,7 +2,7 @@
 Flask application which serves a motion-JPEG stream.
 """
 
-from flask import Flask, Response, render_template
+from flask import Flask
 from raspicam.blueprint.root import ROOT
 
 
