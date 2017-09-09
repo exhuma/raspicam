@@ -9,8 +9,7 @@ import cv2
 
 from config_resolver import Config
 from processing import detect
-from raspicam.camera import PiCamera, USBCam
-from raspicam.source import FileReader
+from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import NullStorage, Storage
 from raspicam.webui import make_app
 
