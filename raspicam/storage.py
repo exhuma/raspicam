@@ -42,12 +42,12 @@ class Storage(metaclass=ABCMeta):
         self.root = getcwd()
 
     @abstractmethod
-    def write_video(self, frame, output_needed):
+    def write_video(self, frame, has_motion):
         '''
         Add *frame* to a video file.
 
         :param frame: The frame to append to the video.
-        :param output_needed: Wheter the video contains regions in which motion
+        :param has_motion: Wheter the video contains regions in which motion
             was detected or not.
         '''
         raise NotImplementedError('Not yet implemented')
@@ -130,7 +130,7 @@ class DiskStorage(Storage):
     Writes files to disk
     '''
 
-    def write_video(self, frame, output_needed):
+    def write_video(self, frame, has_motion):
         '''
         See :py:meth:`.Storage.write_video`
         '''
@@ -143,7 +143,7 @@ class DiskStorage(Storage):
         basename = timestamp.strftime(
             '%Y-%m-%dT%H.%M.%S') + self.video_extension
         absname = join(dirname, basename)
-        if not output_needed:
+        if not has_motion:
             self.lookbehind.append(frame)
             return True
         else:
@@ -201,7 +201,7 @@ class NullStorage(Storage):
     This can be useful to disable storage alltogether and/or debugging.
     '''
 
-    def write_video(self, frame, output_needed):
+    def write_video(self, frame, has_motion):
         '''
         See :py:meth:`.Storage.write_video`
         '''
