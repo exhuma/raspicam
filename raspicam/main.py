@@ -46,7 +46,7 @@ class Application:
         '''
         cli_args = cli_args or []
         if not self.initialised:
-            args = self.parse_args(cli_args)
+            args = parse_args(cli_args)
             self.config = Config('exhuma', 'raspicam', require_load=True)
             self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
@@ -56,18 +56,6 @@ class Application:
             self.initialised = True
             LOG.info('Application successfully initialised.')
             return args
-
-    def parse_args(self, cli_args):
-        '''
-        Parse CLI arguments and return the parsed object.
-        '''
-        parser = ArgumentParser()
-        parser.add_argument('ui', help='Chose a UI. One of [gui, web, cli]')
-        parser.add_argument('-d', '--debug', action='store_true', default=False,
-                            help='Enable debug mode')
-        parser.add_argument('-v', dest='verbosity', action='count', default=0,
-                            help='Increase log verbosity')
-        return parser.parse_args(cli_args)
 
     @property
     def verbosity(self):
@@ -144,6 +132,19 @@ class Application:
         '''
         for _ in self.__stream:
             pass
+
+
+def parse_args(cli_args):
+    '''
+    Parse CLI arguments and return the parsed object.
+    '''
+    parser = ArgumentParser()
+    parser.add_argument('ui', help='Chose a UI. One of [gui, web, cli]')
+    parser.add_argument('-d', '--debug', action='store_true', default=False,
+                        help='Enable debug mode')
+    parser.add_argument('-v', dest='verbosity', action='count', default=0,
+                        help='Increase log verbosity')
+    return parser.parse_args(cli_args)
 
 
 def main():
