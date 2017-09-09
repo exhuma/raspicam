@@ -90,9 +90,9 @@ class Application:
             arguments = []
         if kind == 'usb':
             if arguments:
-                index = -1
-            else:
                 index = int(arguments[0])
+            else:
+                index = -1
             return USBCam(index).frame_generator()
         elif kind == 'raspberrypi':
             return PiCamera().frame_generator()
