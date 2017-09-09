@@ -19,8 +19,8 @@ from raspicam.pipeline import (
     masker,
     resizer,
     tiler,
-    togray
-)
+    togray,
+    InterFrame)
 from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)
@@ -124,10 +124,10 @@ def text_adder(frames, motion_regions):
     '''
     text = 'Motion detected' if motion_regions else 'No motion'
     current_time = datetime.now()
-    with_text = add_text(frames[-1],
+    with_text = add_text(frames[-1].image,
                          text,
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-    return MutatorOutput('text_adder', [with_text], motion_regions)
+    return MutatorOutput([InterFrame(with_text, 'text_adder')], motion_regions)
 
 
 class DiskWriter:
@@ -159,11 +159,11 @@ class DiskWriter:
         )
 
         if not motion_regions:
-            return MutatorOutput(self.label, [], motion_regions)
+            return MutatorOutput([], motion_regions)
 
         now = datetime.now()
         if now - self.last_image_written < self.interval:
-            return MutatorOutput(self.label, [], motion_regions)
+            return MutatorOutput([], motion_regions)
 
         self.last_image_written = now
 
@@ -173,7 +173,7 @@ class DiskWriter:
             subdir=self.subdir
         )
 
-        return MutatorOutput(self.label, [], motion_regions)
+        return MutatorOutput([], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,

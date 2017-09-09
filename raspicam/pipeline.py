@@ -15,8 +15,9 @@ import numpy as np
 from raspicam.operations import tile
 
 LOG = logging.getLogger(__name__)
+InterFrame = namedtuple('InterFrame', 'image label')
 MutatorOutput = namedtuple(
-    'MutatorOutput', 'label intermediate_frames motion_regions')
+    'MutatorOutput', 'intermediate_frames motion_regions')
 
 
 def tiler(label='tiler', **kwargs):
@@ -32,8 +33,12 @@ def tiler(label='tiler', **kwargs):
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
-        output = tile(frames, **kwargs)
-        return MutatorOutput(label, [output], motion_regions)
+        output = InterFrame(
+            tile([frm.image for frm in frames],
+                 labels=[frm.label for frm in frames],
+                 **kwargs),
+            label)
+        return MutatorOutput([output], motion_regions)
     return fun
 
 
@@ -46,8 +51,8 @@ def resizer(dimension, label='resizer'):
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
-        return MutatorOutput(label, [cv2.resize(frames[-1], dimension)],
-                             motion_regions)
+        output = InterFrame(cv2.resize(frames[-1].image, dimension), label)
+        return MutatorOutput([output], motion_regions)
     return fun
 
 
@@ -55,9 +60,9 @@ def togray(frames, motion_regions):
     '''
     Converts a frame to grayscale
     '''
-    return MutatorOutput('togray',
-                         [cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)],
-                         motion_regions)
+    output = InterFrame(cv2.cvtColor(frames[-1].image, cv2.COLOR_BGR2GRAY),
+                        'togray')
+    return MutatorOutput([output], motion_regions)
 
 
 def blur(pixels, label='blur'):
@@ -73,10 +78,9 @@ def blur(pixels, label='blur'):
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
-        return MutatorOutput(
-            label,
-            [cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)],
-            motion_regions)
+        output = InterFrame(
+            cv2.GaussianBlur(frames[-1].image, (pixels, pixels), 0), label)
+        return MutatorOutput([output], motion_regions)
     return fun
 
 
@@ -106,20 +110,20 @@ def masker(mask_filename, label='mask'):
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
         return lambda frames, motion_regions: MutatorOutput(
-            label,
-            [frames[-1]],
+            [InterFrame(frames[-1], label)],
             motion_regions)
 
     mask = cv2.imread(mask_filename, 0)
 
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
-        frame = frames[-1]
+        frame = frames[-1].image
 
         if len(frame.shape) == 3:
             LOG.warning('Unable to apply the mask to a color image. '
                         'Convert to B/W first!')
-            return MutatorOutput(label, [frame], motion_regions)
+            return MutatorOutput([InterFrame(frame, label)],
+                                 motion_regions)
 
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed '
@@ -130,7 +134,10 @@ def masker(mask_filename, label='mask'):
             resized_mask = mask
         bitmask = cv2.inRange(resized_mask, 0, 0) != 0
         output = np.ma.masked_array(frame, mask=bitmask, fill_value=0).filled()
-        return MutatorOutput(label, [resized_mask, output], motion_regions)
+        return MutatorOutput([
+            InterFrame(resized_mask, '%s: mask-resized' % label),
+            InterFrame(output, '%s: masked frame' % label),
+        ], motion_regions)
     return fun
 
 
@@ -155,7 +162,7 @@ class MotionDetector:
         self.label = label
 
     def __call__(self, frames, motion_regions):
-        fgmask = self.fgbg.apply(frames[-1])
+        fgmask = self.fgbg.apply(frames[-1].image)
         shadows = cv2.inRange(fgmask, 127, 127) == 255
         without_shadows = np.ma.masked_array(
             fgmask, mask=shadows, fill_value=0).filled()
@@ -164,7 +171,10 @@ class MotionDetector:
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-        return MutatorOutput(self.label, [fgmask, without_shadows], contours)
+        return MutatorOutput([
+            InterFrame(fgmask, '%s - w/ shadows' % self.label),
+            InterFrame(without_shadows, '%s - no shadows' % self.label),
+        ], contours)
 
 
 def file_extractor(filename, label='file_extractor'):
@@ -178,8 +188,8 @@ def file_extractor(filename, label='file_extractor'):
     '''
     def extract(frames, motion_regions):
         # pylint: disable=missing-docstring
-        cv2.imwrite(filename, frames[-1])
-        return MutatorOutput(label, [], motion_regions)
+        cv2.imwrite(filename, frames[-1].image)
+        return MutatorOutput([], motion_regions)
     return extract
 
 
@@ -205,12 +215,12 @@ def box_drawer(target_frame_index, source_frame_index=None, label='box_drawer'):
     def draw_bounding_boxes(frames, motion_regions):
         # pylint: disable=missing-docstring
         if source_frame_index:
-            src_shape = frames[source_frame_index].shape
-            dst_shape = frames[target_frame_index].shape
+            src_shape = frames[source_frame_index].image.shape
+            dst_shape = frames[target_frame_index].image.shape
             width_ratio = 1 / (src_shape[1] / dst_shape[1])
             height_ratio = 1 / (src_shape[0] / dst_shape[0])
 
-        modified = frames[target_frame_index].copy()
+        modified = frames[target_frame_index].image.copy()
         for contour in motion_regions:
             x, y, w, h = cv2.boundingRect(contour)
             if source_frame_index:
@@ -219,7 +229,8 @@ def box_drawer(target_frame_index, source_frame_index=None, label='box_drawer'):
                 y = int(y * height_ratio)
                 h = int(h * height_ratio)
             cv2.rectangle(modified, (x, y), (x+w, y+h), (0, 255, 0), 1)
-        return MutatorOutput(label, [modified], motion_regions)
+        return MutatorOutput([InterFrame(modified, label)],
+                             motion_regions)
     return draw_bounding_boxes
 
 
@@ -261,7 +272,7 @@ class DetectionPipeline:
         '''
         Delegate to the output frame of the pipeline.
         '''
-        return self.intermediate_frames[-1]
+        return self.intermediate_frames[-1].image
 
     def feed(self, frame):
         '''
@@ -272,7 +283,7 @@ class DetectionPipeline:
         :return: The final resulting frame
         '''
         del self.intermediate_frames[:]
-        self.intermediate_frames.append(frame)
+        self.intermediate_frames.append(InterFrame(frame, 'initial frame'))
         motion_regions = []
         for i, func in enumerate(self.operations):
             try:
@@ -287,7 +298,7 @@ class DetectionPipeline:
                 # it any further
                 continue
 
-            frame = output.intermediate_frames[-1]
+            frame = output.intermediate_frames[-1].image
             motion_regions = output.motion_regions
             self.intermediate_frames.extend(output.intermediate_frames)
             if output.motion_regions:
