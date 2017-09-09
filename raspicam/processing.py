@@ -157,11 +157,11 @@ class DiskWriter:
         )
 
         if not motion_regions:
-            return MutatorOutput([frames[-1]], motion_regions)
+            return MutatorOutput([], motion_regions)
 
         now = datetime.now()
         if now - self.last_image_written < self.interval:
-            return MutatorOutput([frames[-1]], motion_regions)
+            return MutatorOutput([], motion_regions)
 
         self.last_image_written = now
 
@@ -171,7 +171,7 @@ class DiskWriter:
             subdir=self.subdir
         )
 
-        return MutatorOutput([frames[-1]], motion_regions)
+        return MutatorOutput([], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,

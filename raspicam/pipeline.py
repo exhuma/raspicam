@@ -268,6 +268,12 @@ class DetectionPipeline:
                 LOG.critical('Exception raise at pipeline position %d in '
                              'function %s', i, func)
                 raise
+
+            if not output.intermediate_frames:
+                # If the operation did not generate new frames, we don't process
+                # it any further
+                continue
+
             frame = output.intermediate_frames[-1]
             motion_regions = output.motion_regions
             self.intermediate_frames.extend(output.intermediate_frames)
