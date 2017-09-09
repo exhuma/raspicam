@@ -154,7 +154,7 @@ class DiskWriter:
     def __call__(self, frames, motion_regions):
 
         self.storage.write_video(
-            frames[self.pipeline_index],
+            frames[self.pipeline_index].image,
             bool(motion_regions)
         )
 
@@ -169,7 +169,7 @@ class DiskWriter:
 
         self.storage.write_snapshot(
             now,
-            frames[self.pipeline_index],
+            frames[self.pipeline_index].image,
             subdir=self.subdir
         )
 

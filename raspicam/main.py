@@ -52,6 +52,7 @@ class Application:
             self.mask = self.config.get('detection', 'mask', default=None)
             self.__stream = detect(self.frames, self.storage, self.mask,
                                    debug=args.debug)
+            self.verbosity = args.verbosity
             self.initialised = True
             LOG.info('Application successfully initialised.')
             return args
