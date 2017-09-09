@@ -100,6 +100,12 @@ def add_text(image, header, footer):
 
 
 def warmup(frame_generator, iterations=20):
+    '''
+    Read *iterations* frames from *frame_generator*, then return.
+
+    This is useful to give a webcam time to "settle". It usually needs this time
+    to determine optimal brightness and exposure settings.
+    '''
     LOG.info('Warming up...')
     for i in range(1, iterations+1):
         image = next(frame_generator)
@@ -112,6 +118,13 @@ def warmup(frame_generator, iterations=20):
 
 
 def text_adder(frames, motion_regions):
+    '''
+    Pipeline operation which adds a default header and footer to a frame.
+
+    :param frames: The list of pipeline frames.
+    :param motion_regions: A list of regions containing motion.
+    :returns: A MutatorOutput
+    '''
     text = 'Motion detected' if motion_regions else 'No motion'
     current_time = datetime.now()
     with_text = add_text(frames[-1],
@@ -121,6 +134,16 @@ def text_adder(frames, motion_regions):
 
 
 class DiskWriter:
+    '''
+    Pipeline operation which writes files to a storage.
+
+    :param interval: The minimul interval between which images/snapshots should
+        be written to disk.
+    :param storage: An implementation of :py:class:`raspicam.storage.Storage`.
+    :param pipeline_index: The index of pipeline image which should be used as
+        storage source.
+    :param subdir: Optional sub-directory name for snapshots.
+    '''
 
     def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
         self.interval = interval
