@@ -127,7 +127,7 @@ def text_adder(frames, motion_regions):
     with_text = add_text(frames[-1],
                          text,
                          current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-    return MutatorOutput([with_text], motion_regions)
+    return MutatorOutput('text_adder', [with_text], motion_regions)
 
 
 class DiskWriter:
@@ -142,12 +142,14 @@ class DiskWriter:
     :param subdir: Optional sub-directory name for snapshots.
     '''
 
-    def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
+    def __init__(self, interval, storage, pipeline_index=-1, subdir='',
+                 label='DiskWriter'):
         self.interval = interval
         self.storage = storage
         self.last_image_written = datetime(1970, 1, 1)
         self.pipeline_index = pipeline_index
         self.subdir = subdir
+        self.label = label
 
     def __call__(self, frames, motion_regions):
 
@@ -157,11 +159,11 @@ class DiskWriter:
         )
 
         if not motion_regions:
-            return MutatorOutput([], motion_regions)
+            return MutatorOutput(self.label, [], motion_regions)
 
         now = datetime.now()
         if now - self.last_image_written < self.interval:
-            return MutatorOutput([], motion_regions)
+            return MutatorOutput(self.label, [], motion_regions)
 
         self.last_image_written = now
 
@@ -171,7 +173,7 @@ class DiskWriter:
             subdir=self.subdir
         )
 
-        return MutatorOutput([], motion_regions)
+        return MutatorOutput(self.label, [], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,

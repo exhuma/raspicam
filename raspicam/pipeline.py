@@ -16,35 +16,37 @@ from raspicam.operations import tile
 
 LOG = logging.getLogger(__name__)
 MutatorOutput = namedtuple(
-    'MutatorOutput', 'intermediate_frames motion_regions')
+    'MutatorOutput', 'label intermediate_frames motion_regions')
 
 
-def tiler(**kwargs):
+def tiler(label='tiler', **kwargs):
     '''
     Creates a new pipeline operation to tile images.
 
     The created operation creates a new frame which tiles each intermediate
     frame.
 
+    :param label: A label for this operation
     :param kwargs: keyword arguments which are delegated to
         :py:func:`raspicam.operations.tile`
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
         output = tile(frames, **kwargs)
-        return MutatorOutput([output], motion_regions)
+        return MutatorOutput(label, [output], motion_regions)
     return fun
 
 
-def resizer(dimension):
+def resizer(dimension, label='resizer'):
     '''
     Creates a new pipeline operation which resizes a frame to *dimension*.
 
+    :param label: A label for this operation
     :param dimension: The target dimension of the frame
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
-        return MutatorOutput([cv2.resize(frames[-1], dimension)],
+        return MutatorOutput(label, [cv2.resize(frames[-1], dimension)],
                              motion_regions)
     return fun
 
@@ -53,11 +55,12 @@ def togray(frames, motion_regions):
     '''
     Converts a frame to grayscale
     '''
-    return MutatorOutput([cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)],
+    return MutatorOutput('togray',
+                         [cv2.cvtColor(frames[-1], cv2.COLOR_BGR2GRAY)],
                          motion_regions)
 
 
-def blur(pixels):
+def blur(pixels, label='blur'):
     '''
     Creates a new pipeline operation which blurs the frame by *pixels*.
 
@@ -65,17 +68,19 @@ def blur(pixels):
         OpenCV does not accept each value. From my educated guess, even values
         will not work!
 
+    :param label: The labal for this operation.
     :param dimension: The target dimension of the frame.
     '''
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
         return MutatorOutput(
+            label,
             [cv2.GaussianBlur(frames[-1], (pixels, pixels), 0)],
             motion_regions)
     return fun
 
 
-def masker(mask_filename):
+def masker(mask_filename, label='mask'):
     '''
     Creates a new pipeline operation which applies a mask taken from
     *mask_filename* to the image. The image should be black/white only. Black
@@ -100,8 +105,10 @@ def masker(mask_filename):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames, motion_regions: MutatorOutput([frames[-1]],
-                                                            motion_regions)
+        return lambda frames, motion_regions: MutatorOutput(
+            label,
+            [frames[-1]],
+            motion_regions)
 
     mask = cv2.imread(mask_filename, 0)
 
@@ -112,7 +119,7 @@ def masker(mask_filename):
         if len(frame.shape) == 3:
             LOG.warning('Unable to apply the mask to a color image. '
                         'Convert to B/W first!')
-            return MutatorOutput([frame], motion_regions)
+            return MutatorOutput(label, [frame], motion_regions)
 
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed '
@@ -123,7 +130,7 @@ def masker(mask_filename):
             resized_mask = mask
         bitmask = cv2.inRange(resized_mask, 0, 0) != 0
         output = np.ma.masked_array(frame, mask=bitmask, fill_value=0).filled()
-        return MutatorOutput([resized_mask, output], motion_regions)
+        return MutatorOutput(label, [resized_mask, output], motion_regions)
     return fun
 
 
@@ -139,10 +146,13 @@ class MotionDetector:
 
     In addition, this operator will also generate motion regions in the output.
     These regions are standard OpenCV contours.
+    
+    :param label: The label for this operation.
     '''
 
-    def __init__(self):
+    def __init__(self, label='MotionDetector'):
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
+        self.label = label
 
     def __call__(self, frames, motion_regions):
         fgmask = self.fgbg.apply(frames[-1])
@@ -154,24 +164,26 @@ class MotionDetector:
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
-        return MutatorOutput([fgmask, without_shadows], contours)
+        return MutatorOutput(self.label, [fgmask, without_shadows], contours)
 
 
-def file_extractor(filename):
+def file_extractor(filename, label='file_extractor'):
     '''
     Creates a new pipeline operation which simply writes the current frame out
     to the specified *filename*. No modification is done.
 
     If the file already exists, it will be overwritten.
+    
+    :param label: The label of this operation
     '''
     def extract(frames, motion_regions):
         # pylint: disable=missing-docstring
         cv2.imwrite(filename, frames[-1])
-        return MutatorOutput([], motion_regions)
+        return MutatorOutput(label, [], motion_regions)
     return extract
 
 
-def box_drawer(target_frame_index, source_frame_index=None):
+def box_drawer(target_frame_index, source_frame_index=None, label='box_drawer'):
     '''
     Creates a new pipeline operation which draws bounding boxes around the
     motion regions fed into the operation. The boxes are drawn on top of the
@@ -188,6 +200,7 @@ def box_drawer(target_frame_index, source_frame_index=None):
         be drawn to.
     :param source_frame_index: The index of the frame which generated the motion
         regions.
+    :param label: The label of this operation
     '''
     def draw_bounding_boxes(frames, motion_regions):
         # pylint: disable=missing-docstring
@@ -206,7 +219,7 @@ def box_drawer(target_frame_index, source_frame_index=None):
                 y = int(y * height_ratio)
                 h = int(h * height_ratio)
             cv2.rectangle(modified, (x, y), (x+w, y+h), (0, 255, 0), 1)
-        return MutatorOutput([modified], motion_regions)
+        return MutatorOutput(label, [modified], motion_regions)
     return draw_bounding_boxes
 
 
