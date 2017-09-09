@@ -51,7 +51,6 @@ class Application:
             self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
             self.mask = self.config.get('detection', 'mask', default=None)
-            self.verbosity = args.verbosity
             self.__stream = detect(self.frames, self.storage, self.mask,
                                    debug=args.debug)
             self.initialised = True
@@ -103,7 +102,7 @@ class Application:
         else:
             arguments = []
         if kind == 'usb':
-            if len(arguments) == 0:
+            if arguments:
                 index = -1
             else:
                 index = int(arguments[0])
@@ -143,10 +142,14 @@ class Application:
         '''
         Runs the application in CLI mode.
         '''
-        for frame in self.__stream:
+        for _ in self.__stream:
             pass
 
-if __name__ == "__main__":
+
+def main():
+    '''
+    Main entry-point of the application.
+    '''
     import sys
 
     logging.basicConfig(level=logging.CRITICAL)
@@ -161,3 +164,7 @@ if __name__ == "__main__":
         app.run_gui()
     else:
         print("ui must be cli, webui or gui")
+
+
+if __name__ == '__main__':
+    main()

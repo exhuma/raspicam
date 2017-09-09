@@ -128,5 +128,4 @@ def plate_ocr(img) -> str:
     matches = P_PLATE.findall(text.upper())
     if matches:
         return matches[0]
-    else:
-        return ''
+    return ''

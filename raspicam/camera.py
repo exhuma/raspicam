@@ -46,7 +46,7 @@ class USBCam(Camera):
         if not video.isOpened():
             raise Exception('Unable to open camera')
         while True:
-            success, image = video.read()
+            _, image = video.read()
             yield image
         video.release()
 

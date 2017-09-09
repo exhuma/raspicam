@@ -59,7 +59,7 @@ def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
     current_row = 0
     current_col = 0
 
-    for i, image in enumerate(images):
+    for image in images:
         padded_position = Point2D(
             (current_col * tilesize.width) + (gap * (current_col + 1)),
             (current_row * tilesize.height) + (gap * (current_row + 1)))

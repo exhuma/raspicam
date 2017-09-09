@@ -34,7 +34,7 @@ def as_jpeg(image):
     :param image:  The OpenCV image
     :return: a bytes object
     """
-    ret, jpeg = cv2.imencode('.jpg', image)
+    _, jpeg = cv2.imencode('.jpg', image)
     output = jpeg.tostring()
     return output
 
