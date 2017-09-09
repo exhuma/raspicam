@@ -266,6 +266,7 @@ class DetectionPipeline:
         self.operations = operations
         self.intermediate_frames = []
         self.motion_callbacks = []
+        self.motion_regions = []
 
     @property
     def output(self):
@@ -274,20 +275,25 @@ class DetectionPipeline:
         '''
         return self.intermediate_frames[-1].image
 
-    def feed(self, frame):
+    def feed(self, frame, motion_regions=None):
         '''
-        Inject a new frame into the pipeline. Each pipeline operation will be
+        Submit a new frame to the pipeline. Each pipeline operation will be
         applied to this frame, and each intermediate frame will be stored in
         *intermediate_frames*.
+        
+        Optionally this can take a list of "motion regions". If this is
+        non-empty, the frame is considered to have motion.
 
         :return: The final resulting frame
         '''
+        motion_regions = motion_regions or []
         del self.intermediate_frames[:]
+        del self.motion_regions[:]
+        self.motion_regions.extend(motion_regions)
         self.intermediate_frames.append(InterFrame(frame, 'initial frame'))
-        motion_regions = []
         for i, func in enumerate(self.operations):
             try:
-                output = func(self.intermediate_frames, motion_regions)
+                output = func(self.intermediate_frames, self.motion_regions)
             except Exception:
                 LOG.critical('Exception raise at pipeline position %d in '
                              'function %s', i, func)
@@ -301,7 +307,12 @@ class DetectionPipeline:
             frame = output.intermediate_frames[-1].image
             motion_regions = output.motion_regions
             self.intermediate_frames.extend(output.intermediate_frames)
+            self.motion_regions = output.motion_regions
             if output.motion_regions:
                 for callback in self.motion_callbacks:
                     callback(output.motion_regions)
         return frame
+
+    def __call__(self, intermediate_frames, motion_regions):
+        self.feed(intermediate_frames[-1].image, motion_regions)
+        return MutatorOutput(self.intermediate_frames, self.motion_regions)
