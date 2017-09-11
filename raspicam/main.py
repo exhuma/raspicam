@@ -8,8 +8,8 @@ from argparse import ArgumentParser
 import cv2
 
 from config_resolver import Config
-from processing import detect
 from raspicam.camera import PiCamera, USBCam
+from raspicam.processing import detect
 from raspicam.source import FileReader
 from raspicam.storage import NullStorage, Storage
 from raspicam.webui import make_app
