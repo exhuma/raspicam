@@ -3,6 +3,7 @@ This module contains the main application object.
 """
 
 import logging
+import sys
 from argparse import ArgumentParser
 
 import cv2
@@ -23,6 +24,9 @@ class Application:
 
     It offers three entry-points:
 
+    * run: A simple delegate to the other "run_" methods. The correct method is
+        determined by inspecting the CLI arguments (or customised arguments
+        passed to :py:meth:`~.Application.init`).
     * run_cli: Run the application on the CLI and start reading frames and
         detect motion. This is usually the entry-point you want to run!
     * run_gui: This will run a graphical UI which was originally implemented for
@@ -37,6 +41,7 @@ class Application:
         self.frames = iter([])
         self.mask = None
         self.storage = NullStorage()
+        self.__cli_args = None
         self.__verbosity = 0
         self.__stream = []
 
@@ -44,18 +49,20 @@ class Application:
         '''
         Initialises the application and parses CLI arguments.
         '''
-        cli_args = cli_args or []
+        cli_args = cli_args or sys.argv[1:]
         if not self.initialised:
-            args = parse_args(cli_args)
+            self.__cli_args = parse_args(cli_args)
             self.config = Config('exhuma', 'raspicam', require_load=True)
             self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
             self.mask = self.config.get('detection', 'mask', default=None)
             self.__stream = detect(self.frames, self.storage, self.mask,
-                                   debug=args.debug)
+                                   debug=self.__cli_args.debug)
             self.initialised = True
             LOG.info('Application successfully initialised.')
-            return args
+        else:
+            LOG.debug('Appliation is already initialised. Skipping init!')
+        return self.__cli_args
 
     @property
     def verbosity(self):
@@ -103,6 +110,16 @@ class Application:
         else:
             raise ValueError('%s is an unsupported frame source!')
 
+    def run(self):
+        args = self.init()
+        if args.ui == 'cli':
+            self.run_cli()
+        elif args.ui == 'webui':
+            self.run_webui()
+        elif args.ui == 'gui':
+            self.run_gui()
+        else:
+            print("ui must be cli, webui or gui")
     def run_gui(self):
         '''
         Runs the application as a simple GUI.
@@ -151,20 +168,10 @@ def main():
     '''
     Main entry-point of the application.
     '''
-    import sys
 
     logging.basicConfig(level=logging.CRITICAL)
     app = Application()
-    args = app.init(sys.argv[1:])
-
-    if args.ui == 'cli':
-        app.run_cli()
-    elif args.ui == 'webui':
-        app.run_webui()
-    elif args.ui == 'gui':
-        app.run_gui()
-    else:
-        print("ui must be cli, webui or gui")
+    app.run()
 
 
 if __name__ == '__main__':
