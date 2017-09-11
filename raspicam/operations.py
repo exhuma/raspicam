@@ -77,3 +77,62 @@ def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
             current_row += 1
 
     return canvas
+
+
+def add_text(image, header, footer):
+    """
+    Add a header and footer to an image.
+
+    Example::
+
+        >>> new_image = add_text(old_image, 'Hello', 'world!')
+
+    :param image: The original image
+    :param header:  The header text
+    :param footer:  The footer text
+    :return: A new image with header and footer added
+    """
+    if len(image.shape) == 3:
+        height, width, channels = image.shape
+        canvas_args = [width, channels]
+    else:
+        height, width = image.shape
+        canvas_args = [width]
+
+    font_face = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1
+    thickness = 1
+    padding = 10
+
+    h_size, h_baseline = cv2.getTextSize(
+        header, font_face, font_scale, thickness)
+    h_size = Dimension(h_size[0], h_size[1] + h_baseline)
+
+    f_size, f_baseline = cv2.getTextSize(
+        footer, font_face, font_scale, thickness)
+    f_size = Dimension(f_size[0], f_size[1] + f_baseline)
+
+    new_height = height + h_size.height + (4*padding) + f_size.height
+    canvas = np.zeros((new_height, *canvas_args), np.uint8)
+
+    blit(canvas, image, Dimension(width, height),
+         Point2D(0, h_size.height + (2*padding)))
+
+    cv2.putText(canvas,
+                header,
+                (padding, h_size.height - h_baseline + padding),
+                font_face,
+                font_scale,
+                (255, 255, 255),
+                thickness)
+    cv2.putText(canvas,
+                footer,
+                (padding, canvas.shape[0] - f_baseline - padding),
+                font_face,
+                font_scale,
+                (255, 255, 255),
+                thickness)
+
+    return canvas
+
+

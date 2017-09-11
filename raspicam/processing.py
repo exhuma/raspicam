@@ -3,21 +3,21 @@ This module contains various functions which process image objects.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import cv2
 
-import numpy as np
-from raspicam.localtypes import Dimension, Point2D
-from raspicam.operations import blit
+from raspicam.localtypes import Dimension
+from raspicam.operations import add_text
 from raspicam.pipeline import (
     DetectionPipeline,
+    DiskWriter,
     MotionDetector,
-    MutatorOutput,
     blur,
     box_drawer,
     masker,
     resizer,
+    text_adder,
     tiler,
     togray
 )
@@ -39,63 +39,6 @@ def as_jpeg(image):
     return output
 
 
-def add_text(image, header, footer):
-    """
-    Add a header and footer to an image.
-
-    Example::
-
-        >>> new_image = add_text(old_image, 'Hello', 'world!')
-
-    :param image: The original image
-    :param header:  The header text
-    :param footer:  The footer text
-    :return: A new image with header and footer added
-    """
-    if len(image.shape) == 3:
-        height, width, channels = image.shape
-        canvas_args = [width, channels]
-    else:
-        height, width = image.shape
-        canvas_args = [width]
-
-    font_face = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1
-    thickness = 1
-    padding = 10
-
-    h_size, h_baseline = cv2.getTextSize(
-        header, font_face, font_scale, thickness)
-    h_size = Dimension(h_size[0], h_size[1] + h_baseline)
-
-    f_size, f_baseline = cv2.getTextSize(
-        footer, font_face, font_scale, thickness)
-    f_size = Dimension(f_size[0], f_size[1] + f_baseline)
-
-    new_height = height + h_size.height + (4*padding) + f_size.height
-    canvas = np.zeros((new_height, *canvas_args), np.uint8)
-
-    blit(canvas, image, Dimension(width, height),
-         Point2D(0, h_size.height + (2*padding)))
-
-    cv2.putText(canvas,
-                header,
-                (padding, h_size.height - h_baseline + padding),
-                font_face,
-                font_scale,
-                (255, 255, 255),
-                thickness)
-    cv2.putText(canvas,
-                footer,
-                (padding, canvas.shape[0] - f_baseline - padding),
-                font_face,
-                font_scale,
-                (255, 255, 255),
-                thickness)
-
-    return canvas
-
-
 def warmup(frame_generator, iterations=20):
     '''
     Read *iterations* frames from *frame_generator*, then return.
@@ -112,66 +55,6 @@ def warmup(frame_generator, iterations=20):
             'settling cam...')
         yield with_text
     LOG.info('Warmup done!')
-
-
-def text_adder(frames, motion_regions):
-    '''
-    Pipeline operation which adds a default header and footer to a frame.
-
-    :param frames: The list of pipeline frames.
-    :param motion_regions: A list of regions containing motion.
-    :returns: A MutatorOutput
-    '''
-    text = 'Motion detected' if motion_regions else 'No motion'
-    current_time = datetime.now()
-    with_text = add_text(frames[-1],
-                         text,
-                         current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
-    return MutatorOutput([with_text], motion_regions)
-
-
-class DiskWriter:
-    '''
-    Pipeline operation which writes files to a storage.
-
-    :param interval: The minimul interval between which images/snapshots should
-        be written to disk.
-    :param storage: An implementation of :py:class:`raspicam.storage.Storage`.
-    :param pipeline_index: The index of pipeline image which should be used as
-        storage source.
-    :param subdir: Optional sub-directory name for snapshots.
-    '''
-
-    def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
-        self.interval = interval
-        self.storage = storage
-        self.last_image_written = datetime(1970, 1, 1)
-        self.pipeline_index = pipeline_index
-        self.subdir = subdir
-
-    def __call__(self, frames, motion_regions):
-
-        self.storage.write_video(
-            frames[self.pipeline_index],
-            bool(motion_regions)
-        )
-
-        if not motion_regions:
-            return MutatorOutput([frames[-1]], motion_regions)
-
-        now = datetime.now()
-        if now - self.last_image_written < self.interval:
-            return MutatorOutput([frames[-1]], motion_regions)
-
-        self.last_image_written = now
-
-        self.storage.write_snapshot(
-            now,
-            frames[self.pipeline_index],
-            subdir=self.subdir
-        )
-
-        return MutatorOutput([frames[-1]], motion_regions)
 
 
 def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,

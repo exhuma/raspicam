@@ -8,15 +8,76 @@ For more details, see :py:class:`~.DetectionPipeline`
 
 import logging
 from collections import namedtuple
+from datetime import datetime
 
 import cv2
 
 import numpy as np
-from raspicam.operations import tile
+from raspicam.operations import tile, add_text
 
 LOG = logging.getLogger(__name__)
 MutatorOutput = namedtuple(
     'MutatorOutput', 'intermediate_frames motion_regions')
+
+
+def text_adder(frames, motion_regions):
+    '''
+    Pipeline operation which adds a default header and footer to a frame.
+
+    :param frames: The list of pipeline frames.
+    :param motion_regions: A list of regions containing motion.
+    :returns: A MutatorOutput
+    '''
+    text = 'Motion detected' if motion_regions else 'No motion'
+    current_time = datetime.now()
+    with_text = add_text(frames[-1],
+                         text,
+                         current_time.strftime("%A %d %B %Y %I:%M:%S%p"))
+    return MutatorOutput([with_text], motion_regions)
+
+
+class DiskWriter:
+    '''
+    Pipeline operation which writes files to a storage.
+
+    :param interval: The minimul interval between which images/snapshots should
+        be written to disk.
+    :param storage: An implementation of :py:class:`raspicam.storage.Storage`.
+    :param pipeline_index: The index of pipeline image which should be used as
+        storage source.
+    :param subdir: Optional sub-directory name for snapshots.
+    '''
+
+    def __init__(self, interval, storage, pipeline_index=-1, subdir=''):
+        self.interval = interval
+        self.storage = storage
+        self.last_image_written = datetime(1970, 1, 1)
+        self.pipeline_index = pipeline_index
+        self.subdir = subdir
+
+    def __call__(self, frames, motion_regions):
+
+        self.storage.write_video(
+            frames[self.pipeline_index],
+            bool(motion_regions)
+        )
+
+        if not motion_regions:
+            return MutatorOutput([frames[-1]], motion_regions)
+
+        now = datetime.now()
+        if now - self.last_image_written < self.interval:
+            return MutatorOutput([frames[-1]], motion_regions)
+
+        self.last_image_written = now
+
+        self.storage.write_snapshot(
+            now,
+            frames[self.pipeline_index],
+            subdir=self.subdir
+        )
+
+        return MutatorOutput([frames[-1]], motion_regions)
 
 
 def tiler(**kwargs):
