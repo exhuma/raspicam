@@ -9,9 +9,8 @@ from argparse import ArgumentParser
 import cv2
 
 from config_resolver import Config
-from raspicam.camera import PiCamera, USBCam
 from raspicam.processing import detect
-from raspicam.source import FileReader
+from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import NullStorage, Storage
 from raspicam.webui import make_app
 
@@ -58,6 +57,7 @@ class Application:
             self.mask = self.config.get('detection', 'mask', default=None)
             self.__stream = detect(self.frames, self.storage, self.mask,
                                    debug=self.__cli_args.debug)
+            self.verbosity = self.__cli_args.verbosity
             self.initialised = True
             LOG.info('Application successfully initialised.')
         else:
@@ -98,9 +98,9 @@ class Application:
             arguments = []
         if kind == 'usb':
             if arguments:
-                index = -1
-            else:
                 index = int(arguments[0])
+            else:
+                index = -1
             return USBCam(index).frame_generator()
         elif kind == 'raspberrypi':
             return PiCamera().frame_generator()
@@ -120,6 +120,7 @@ class Application:
             self.run_gui()
         else:
             print("ui must be cli, webui or gui")
+
     def run_gui(self):
         '''
         Runs the application as a simple GUI.

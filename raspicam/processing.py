@@ -19,8 +19,8 @@ from raspicam.pipeline import (
     resizer,
     text_adder,
     tiler,
-    togray
-)
+    togray,
+    InterFrame)
 from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)

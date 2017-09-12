@@ -4,11 +4,39 @@ This module contains helper methods for the project.
 import logging
 
 import cv2
+from itertools import zip_longest
 
 import numpy as np
 from raspicam.localtypes import Dimension, Point2D
 
 LOG = logging.getLogger(__name__)
+
+
+def add_boxed_text(image, text, origin, font_face, font_scale, thickness,
+                   bgcolor, fgcolor):
+    x_padding = 10
+    y_padding = 5
+    text_size, text_baseline = cv2.getTextSize(
+        text, font_face, font_scale, thickness)
+    text_box_size = Dimension(
+        text_size[0] + 2*x_padding,
+        text_size[1] + text_baseline + 2*y_padding
+    )
+    cv2.rectangle(image,
+                  origin,
+                  (origin.x+text_box_size.width, origin.y+text_box_size.height),
+                  bgcolor,
+                  -1)
+    cv2.putText(image,
+                text,
+                (
+                    origin.x+x_padding,
+                    origin.y+text_box_size.height-y_padding-int(text_baseline/2)
+                ),
+                font_face,
+                font_scale,
+                fgcolor,
+                thickness)
 
 
 def blit(canvas, image, size: Dimension, offset: Point2D):
@@ -34,7 +62,7 @@ def blit(canvas, image, size: Dimension, offset: Point2D):
                image, (size.width, size.height))
 
 
-def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
+def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5, labels=None):
     '''
     Creates a new image where each image in *frames* is represented as tile.
 
@@ -43,6 +71,7 @@ def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
         automatically on overflow.
     :param tilesize: The size of each tile.
     :param gap: The padding between each tile.
+    :param labels: An optional array of labels to apply to tiles.
     :returns: A new OpenCV image array.
     '''
 
@@ -59,7 +88,7 @@ def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
     current_row = 0
     current_col = 0
 
-    for image in images:
+    for image, label in zip_longest(images, labels):
         padded_position = Point2D(
             (current_col * tilesize.width) + (gap * (current_col + 1)),
             (current_row * tilesize.height) + (gap * (current_row + 1)))
@@ -70,6 +99,18 @@ def tile(images, cols=3, tilesize=Dimension(320, 240), gap=5):
             continue
         if len(image.shape) == 2:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        else:
+            image = image.copy()
+
+        add_boxed_text(image,
+                       str(label),
+                       Point2D(30, 30),
+                       cv2.FONT_HERSHEY_SIMPLEX,
+                       1,
+                       2,
+                       (60, 0, 0),
+                       (255, 255, 255))
+
         blit(canvas, image, tilesize, padded_position)
         current_col += 1
         if current_col >= cols:
