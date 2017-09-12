@@ -20,7 +20,7 @@ from raspicam.pipeline import (
     text_adder,
     tiler,
     togray,
-    InterFrame)
+)
 from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)
