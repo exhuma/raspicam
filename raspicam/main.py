@@ -9,6 +9,7 @@ from argparse import ArgumentParser
 import cv2
 from config_resolver import Config
 
+import raspicam
 from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
@@ -168,6 +169,8 @@ def parse_args(cli_args):
                         help='Enable debug mode')
     parser.add_argument('-v', dest='verbosity', action='count', default=0,
                         help='Increase log verbosity')
+    parser.add_argument('--version', action='store_true', default=False,
+                        help='Show version and exit')
     return parser.parse_args(cli_args)
 
 
@@ -178,6 +181,10 @@ def main():
 
     logging.basicConfig(level=logging.CRITICAL)
     app = Application()
+    parsed_args = app.init()
+    if parsed_args.version:
+        print('raspicam v%s' % raspicam.__version__)
+        return 0
     app.run()
 
 
