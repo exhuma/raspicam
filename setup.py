@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 
+version = open('raspicam/version.txt').read().strip()
+
 setup(
     name="raspicam",
-    version='1.0',
+    version=version,
     packages=find_packages(),
     install_requires=[
         'config_resolver',
