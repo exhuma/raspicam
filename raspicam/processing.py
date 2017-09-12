@@ -9,19 +9,7 @@ import cv2
 
 from raspicam.localtypes import Dimension
 from raspicam.operations import add_text
-from raspicam.pipeline import (
-    DetectionPipeline,
-    DiskWriter,
-    MotionDetector,
-    blur,
-    box_drawer,
-    masker,
-    resizer,
-    text_adder,
-    tiler,
-    togray,
-)
-from raspicam.storage import NullStorage
+from raspicam.pipeline import tiler
 
 LOG = logging.getLogger(__name__)
 MAX_REFERENCE_AGE = timedelta(minutes=1)
@@ -57,8 +45,7 @@ def warmup(frame_generator, iterations=20):
     LOG.info('Warmup done!')
 
 
-def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
-           debug=False):
+def detect(frame_generator, detection_pipeline, debug=False):
     """
     Run motion detection.
 
@@ -66,11 +53,6 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     bytes objects.
 
     :param frame_generator: A stream/iterable of frames.
-    :param storage: An instance of a storage class. If ``None``, don't store
-        anything
-    :param mask: An black/white image which will be used as mask for each frame.
-        Black pixels will be ignored in motion detection, white pixels will be
-        kept.
     :param detection_pipeline: A pipeline object which gets executed for each
         frame and is responsible to report motion.
     :param debug: If set to True, show intermediate frames as tiles.
@@ -78,27 +60,9 @@ def detect(frame_generator, storage=None, mask=None, detection_pipeline=None,
     :return: A stream of bytes objects
     """
 
-    storage = storage or NullStorage()
-    if detection_pipeline:
-        detection_pipeline = detection_pipeline
-    else:
-        detection_pipeline = DetectionPipeline([
-            resizer(Dimension(640, 480)),
-            togray,
-            blur(11),
-            MotionDetector(),
-            box_drawer(0, 1),
-            text_adder,
-            DiskWriter(
-                timedelta(seconds=5),
-                storage,
-            ),
-        ])
-        if debug:
-            detection_pipeline.operations.append(
-                tiler(cols=4, tilesize=Dimension(640, 480)))
-        if mask:
-            detection_pipeline.operations.insert(2, masker(mask))
+    if debug:
+        detection_pipeline.operations.append(
+            tiler(cols=4, tilesize=Dimension(640, 480)))
 
     for frame in warmup(frame_generator):
         yield frame

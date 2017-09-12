@@ -8,12 +8,14 @@ For more details, see :py:class:`~.DetectionPipeline`
 
 import logging
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import cv2
 
 import numpy as np
+from raspicam.localtypes import Dimension
 from raspicam.operations import tile, add_text
+from raspicam.storage import NullStorage
 
 LOG = logging.getLogger(__name__)
 InterFrame = namedtuple('InterFrame', 'image label')
@@ -379,3 +381,22 @@ class DetectionPipeline:
     def __call__(self, intermediate_frames, motion_regions):
         self.feed(intermediate_frames[-1].image, motion_regions)
         return MutatorOutput(self.intermediate_frames, self.motion_regions)
+
+
+class DefaultPipeline(DetectionPipeline):
+
+    def __init__(self, mask_filename='', storage=None):
+        storage = storage or NullStorage()
+        super().__init__([
+            resizer(Dimension(640, 480)),
+            togray,
+            masker(mask_filename),
+            blur(11),
+            MotionDetector(),
+            box_drawer(0, 1),
+            text_adder,
+            DiskWriter(
+                timedelta(seconds=5),
+                storage,
+            ),
+        ])

@@ -7,8 +7,9 @@ import sys
 from argparse import ArgumentParser
 
 import cv2
-
 from config_resolver import Config
+
+from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import NullStorage, Storage
@@ -38,25 +39,30 @@ class Application:
         self.config = None
         self.initialised = False
         self.frames = iter([])
-        self.mask = None
-        self.storage = NullStorage()
         self.__cli_args = None
         self.__verbosity = 0
         self.__stream = []
 
-    def init(self, cli_args=None):
+    def init(self, cli_args=None, custom_pipeline=None):
         '''
         Initialises the application and parses CLI arguments.
+
+        :param cli_args: CLI arguments
+        :param custom_pipeline: An instance of
+            :py:class:`raspicam.pipeline.DetectionPipeline`. If left to
+            ``None``, :py:class:`raspicam.pipeline.DefaultPipeline` will be
+            used.
         '''
         cli_args = cli_args or sys.argv[1:]
         if not self.initialised:
             self.__cli_args = parse_args(cli_args)
             self.config = Config('exhuma', 'raspicam', require_load=True)
-            self.storage = Storage.from_config(self.config)
             self.frames = self._get_framesource()
-            self.mask = self.config.get('detection', 'mask', default=None)
-            self.__stream = detect(self.frames, self.storage, self.mask,
-                                   debug=self.__cli_args.debug)
+            storage = Storage.from_config(self.config)
+            mask = self.config.get('detection', 'mask', default=None)
+            pipeline = custom_pipeline or DefaultPipeline(mask, storage)
+            self.__stream = detect(self.frames, debug=self.__cli_args.debug,
+                                   detection_pipeline=pipeline)
             self.verbosity = self.__cli_args.verbosity
             self.initialised = True
             LOG.info('Application successfully initialised.')
