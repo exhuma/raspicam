@@ -93,6 +93,7 @@ Contents
 
    scripting
    architecture
+   configuration
    api/index
 
 

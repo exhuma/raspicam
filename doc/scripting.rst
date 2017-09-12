@@ -13,9 +13,9 @@ to provide a no-args "constructor" which does not perform any magic. This
 *should* make testing easier.
 
 Note that configuration is handled via a config-file which controls
-site-specific configuration and is searched for by :py:mod:`config_resolver`.
-Have a look at ``app.ini.dist`` as well, which lives in the source repository
-for a template of the config file.
+site-specific configuration and is searched for by `config_resolver
+<https://config-resolver.readthedocs.io/>`_ Have a look at ``app.ini.dist`` as
+well, which lives in the source repository for a template of the config file.
 
 
 Customized Pipeline
