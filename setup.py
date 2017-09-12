@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 
+version = open('raspicam/version.txt').read().strip()
+
 setup(
     name="raspicam",
-    version='1.0',
+    version=version,
     packages=find_packages(),
     install_requires=[
         'config_resolver',
@@ -18,6 +20,11 @@ setup(
         'numpy',
         'pytesseract',
     ],
+    entry_points={
+        'console_scripts': [
+            'raspicam=raspicam.main:main'
+        ]
+    },
     provides=['raspicam'],
     include_package_data=True,
     author="Michel Albert",

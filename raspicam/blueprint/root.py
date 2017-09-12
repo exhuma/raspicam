@@ -1,12 +1,10 @@
 from datetime import datetime
 from glob import glob
 from os import listdir
-from os.path import join, isdir, abspath
+from os.path import abspath, isdir, join
 from time import sleep
 
-from flask import Blueprint, current_app
-from flask import render_template, Response, send_file
-
+from flask import Blueprint, Response, current_app, render_template, send_file
 from raspicam.processing import as_jpeg
 
 ROOT = Blueprint('root', __name__)

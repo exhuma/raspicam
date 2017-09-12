@@ -3,10 +3,13 @@ raspicam
 
 Playground for Raspberry Pi motion detection using Python.
 
+.. figure:: images/debug_frame.jpg
 
-.. figure:: images/example.jpg
+    Output picture in debug mode, showing all pipeline steps.
 
-   Example output picture.
+.. figure:: images/normal_frame.jpg
+
+    Output picture in normal mode, showing the final pipeline output.
 
 
 Some assumptions
