@@ -58,8 +58,8 @@ class USBCam(Source):
     Camera.
 
     :param index: The index passed to ``OpenCV.VideoCapture``. Using ``-1`` will
-    search for the first available cam, while ``0`` represents the system
-    default.
+        search for the first available cam, while ``0`` represents the system
+        default.
     '''
 
     def __init__(self, index=-1):
