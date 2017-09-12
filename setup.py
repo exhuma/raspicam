@@ -18,6 +18,11 @@ setup(
         'numpy',
         'pytesseract',
     ],
+    entry_points={
+        'console_scripts': [
+            'raspicam=raspicam.main:main'
+        ]
+    },
     provides=['raspicam'],
     include_package_data=True,
     author="Michel Albert",
