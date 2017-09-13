@@ -242,14 +242,12 @@ class MotionDetector:
         ], contours)
 
 
-def file_extractor(filename, label='file_extractor'):
+def file_extractor(filename):
     '''
     Creates a new pipeline operation which simply writes the current frame out
     to the specified *filename*. No modification is done.
 
     If the file already exists, it will be overwritten.
-
-    :param label: The label of this operation
     '''
     def extract(frames, motion_regions):
         # pylint: disable=missing-docstring
