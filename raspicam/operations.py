@@ -3,9 +3,9 @@ This module contains helper methods for the project.
 '''
 import logging
 
-import cv2
 from itertools import zip_longest
 
+import cv2
 import numpy as np
 from raspicam.localtypes import Dimension, Point2D
 
@@ -189,5 +189,3 @@ def add_text(image, header, footer):
                 thickness)
 
     return canvas
-
-

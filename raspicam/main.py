@@ -13,7 +13,7 @@ import raspicam
 from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
-from raspicam.storage import NullStorage, Storage
+from raspicam.storage import Storage
 from raspicam.webui import make_app
 
 LOG = logging.getLogger(__name__)
