@@ -14,6 +14,20 @@ LOG = logging.getLogger(__name__)
 
 def add_boxed_text(image, text, origin, font_face, font_scale, thickness,
                    bgcolor, fgcolor):
+    '''
+    Adds a text-string at the given position surrounded by a filled box.
+
+    The image will be modified in-place!
+
+    :param image: The image onto which to add the text.
+    :param text: The string to display.
+    :param origin: The upper-left corner of the text.
+    :param font_face: The OpenCV font to use.
+    :param font_scale: The OpenCV font size.
+    :param thickness: "boldness"/font-weight.
+    :param bgcolor: The color of the surrounding box.
+    :param fgcolor: The color of the text.
+    '''
     x_padding = 10
     y_padding = 5
     text_size, text_baseline = cv2.getTextSize(

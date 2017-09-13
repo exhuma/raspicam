@@ -118,6 +118,9 @@ class Application:
             raise ValueError('%s is an unsupported frame source!')
 
     def run(self):
+        '''
+        Parses CLI args and delegates to the appropriate UI.
+        '''
         args = self.init()
         if args.ui == 'cli':
             self.run_cli()
