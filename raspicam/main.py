@@ -94,18 +94,8 @@ class ReaderThread(Thread):
 class Application:
     '''
     The main application.
-
-    It offers three entry-points:
-
-    * run: A simple delegate to the other "run_" methods. The correct method is
-        determined by inspecting the CLI arguments (or customised arguments
-        passed to :py:meth:`~.Application.init`).
-    * run_cli: Run the application on the CLI and start reading frames and
-        detect motion. This is usually the entry-point you want to run!
-    * run_gui: This will run a graphical UI which was originally implemented for
-        debugging and development.
-    * run_webui: A simple web-ui. Also implemented originally to offer a way to
-        access files stored in the application storage.
+    
+    Use "run" to start it.
     '''
 
     def __init__(self):
@@ -200,18 +190,20 @@ class Application:
         web_thread = WebThread(webapp)
         web_thread.start()
 
-        gui_thread = GuiThread(self.reader_thread)
-        gui_thread.start()
+        if self.__cli_args.run_gui:
+            gui_thread = GuiThread(self.reader_thread)
+            gui_thread.start()
 
         while True:
             try:
                 sleep(0.1)
             except KeyboardInterrupt:
                 LOG.info('Intercepted CTRL+C')
-                gui_thread.shutdown()
+                if self.__cli_args.run_gui:
+                    gui_thread.shutdown()
                 web_thread.shutdown()
 
-            if not gui_thread.is_alive():
+            if self.__cli_args.run_gui and not gui_thread.is_alive():
                 LOG.debug('GUI exited')
                 break
 
@@ -233,7 +225,8 @@ def parse_args(cli_args):
     Parse CLI arguments and return the parsed object.
     '''
     parser = ArgumentParser()
-    parser.add_argument('ui', help='Chose a UI. One of [gui, web, cli]')
+    parser.add_argument('-g', '--run-gui', help='Enable simple desktop GUI',
+                        default=False, action='store_true')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='Enable debug mode')
     parser.add_argument('-v', dest='verbosity', action='count', default=0,
