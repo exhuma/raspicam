@@ -24,7 +24,13 @@ def multipart_stream(frame_generator):
     :param frame_generator: A generater which generates image frames as *bytes* objects
     :return: A new, wrapped stream of bytes
     """
-    for output in frame_generator:
+    current_frame_id = id(frame_generator.frame)
+    while True:
+        while current_frame_id == id(frame_generator.frame):
+            # sleep as long as the frame has not changed in the thread
+            sleep(0.01)
+        output = frame_generator.frame
+        current_frame_id = id(output)
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n'
                b'\r\n' + as_jpeg(output) + b'\r\n'
