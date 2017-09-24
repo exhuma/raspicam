@@ -207,6 +207,10 @@ class Application:
                 LOG.debug('GUI exited')
                 break
 
+            if not web_thread.is_alive():
+                LOG.debug('Web server exited (possible call to /shutdown)')
+                break
+
         web_thread.shutdown()
         web_thread.join()
         gui_thread.join()
