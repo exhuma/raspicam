@@ -57,7 +57,7 @@ class WebThread(Thread):
 
     def run(self):
         self._log.info('Running Web Server')
-        self.__app.run(host='0.0.0.0')
+        self.__app.run(host='0.0.0.0', threaded=True)
 
     def shutdown(self):
         import http.client
