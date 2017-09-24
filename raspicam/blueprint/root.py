@@ -91,7 +91,9 @@ def player(fname):
 @ROOT.route('/files')
 @ROOT.route('/files/<path:path>')
 def files(path=''):
-    basedir = current_app.localconf.get('storage', 'root')
+    basedir = current_app.localconf.get('storage', 'root', default=None)
+    if not basedir:
+        return 'No storage defined in config!'
     sysdir = join(basedir, path)
     videos = []
     paths = []
