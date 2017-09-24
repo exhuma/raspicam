@@ -63,11 +63,14 @@ class WebThread(Thread):
     def shutdown(self):
         import http.client
         conn = http.client.HTTPConnection("localhost", 5000)
-        conn.request("POST", "/shutdown")
-        res = conn.getresponse()
-        if res.status != 200:
-            self._log.error('Something went wrong sending the shutdown command to '
-                      'the webui: %s', res.reason)
+        try:
+            conn.request("POST", "/shutdown")
+            res = conn.getresponse()
+            if res.status != 200:
+                self._log.error('Something went wrong sending the shutdown command to '
+                        'the webui: %s', res.reason)
+        except ConnectionRefusedError:
+            LOG.info('Connection to web-thread lost. Shutdown successful!')
 
 
 class ReaderThread(Thread):
@@ -217,7 +220,8 @@ class Application:
 
         web_thread.shutdown()
         web_thread.join()
-        gui_thread.join()
+        if self.__cli_args.run_gui:
+            gui_thread.join()
 
         self.reader_thread.shutdown()
         self.reader_thread.join()
