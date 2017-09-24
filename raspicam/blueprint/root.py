@@ -60,9 +60,10 @@ def shutdown():
     return 'Server shutting down...'
 
 
+@ROOT.route('/')
 @ROOT.route('/show_stream')
 def show_stream():
-    return render_template('index.html')
+    return render_template('show_stream.html')
 
 
 @ROOT.route('/file/<path:fname>')
@@ -87,7 +88,6 @@ def player(fname):
     return render_template('player.html', fname=fname)
 
 
-@ROOT.route('/')
 @ROOT.route('/files')
 @ROOT.route('/files/<path:path>')
 def files(path=''):
