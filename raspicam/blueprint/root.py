@@ -4,7 +4,7 @@ from os import listdir
 from os.path import abspath, isdir, join
 from time import sleep
 
-from flask import Blueprint, Response, current_app, render_template, send_file
+from flask import Blueprint, Response, current_app, render_template, send_file, request
 from raspicam.processing import as_jpeg
 
 ROOT = Blueprint('root', __name__)
@@ -39,6 +39,19 @@ def filereader():
         with open(fname, 'rb') as fp:
             yield fp.read()
             sleep(0.5)
+
+
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+
+@ROOT.route('/shutdown', methods=['POST'])
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
 
 
 @ROOT.route('/show_stream')
