@@ -152,6 +152,9 @@ class Application:
         self.__verbosity = value
         logger = logging.getLogger()
         logger.setLevel(max(0, logging.CRITICAL - (10 * value)))
+        if value > 0:
+            logging.getLogger('werkzeug').setLevel(logging.INFO)
+
 
     def _get_framesource(self):
         '''
