@@ -17,6 +17,7 @@ from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import NullStorage, Storage
+from raspicam.web.colorize import colorize_werkzeug
 from raspicam.webui import make_app
 
 LOG = logging.getLogger(__name__)
@@ -154,7 +155,7 @@ class Application:
         logger.setLevel(max(0, logging.CRITICAL - (10 * value)))
         if value > 0:
             logging.getLogger('werkzeug').setLevel(logging.INFO)
-
+            colorize_werkzeug()
 
     def _get_framesource(self):
         '''
