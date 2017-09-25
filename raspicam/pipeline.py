@@ -190,6 +190,9 @@ def masker(mask_filename, label='mask'):
             return MutatorOutput([InterFrame(frame, label)],
                                  motion_regions)
 
+        if not mask:
+            return MutatorOutput([], motion_regions)
+
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed '
                         'image. It should be %s but is %s',
