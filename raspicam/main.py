@@ -7,6 +7,9 @@ import sys
 from argparse import ArgumentParser
 
 import cv2
+from threading import Thread
+from time import sleep
+
 from config_resolver import Config
 
 import raspicam
@@ -14,26 +17,89 @@ from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import Storage
+from raspicam.web.colorize import colorize_werkzeug
 from raspicam.webui import make_app
 
 LOG = logging.getLogger(__name__)
+
+
+class GuiThread(Thread):
+
+    def __init__(self, reader_thread):
+        super().__init__()
+        self._log = logging.getLogger(__name__ + '.gui')
+        self.daemon = True
+        self.__reader = reader_thread
+        self.__keep_running = True
+
+    def run(self):
+        while self.__keep_running:
+            frame = self.__reader.frame
+            if frame is None:
+                self._log.debug('No frame available yet. Waiting...')
+                sleep(0.1)
+                continue
+            cv2.imshow('RaspiCam Main Window', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                self.__keep_running = False
+        cv2.destroyAllWindows()
+
+    def shutdown(self):
+        self.__keep_running = False
+
+
+class WebThread(Thread):
+
+    def __init__(self, app):
+        super().__init__()
+        self._log = logging.getLogger(__name__ + '.web')
+        self.__app = app
+        self.daemon = True
+
+    def run(self):
+        self._log.info('Running Web Server')
+        self.__app.run(host='0.0.0.0', threaded=True)
+
+    def shutdown(self):
+        import http.client
+        conn = http.client.HTTPConnection("localhost", 5000)
+        try:
+            conn.request("POST", "/shutdown")
+            res = conn.getresponse()
+            if res.status != 200:
+                self._log.error('Something went wrong sending the shutdown command to '
+                        'the webui: %s', res.reason)
+        except ConnectionRefusedError:
+            LOG.info('Connection to web-thread lost. Shutdown successful!')
+
+
+class ReaderThread(Thread):
+
+    def __init__(self, stream):
+        super().__init__()
+        self._log = logging.getLogger(__name__ + '.reader')
+        self.keep_running = True
+        self.daemon = True
+        self.__stream = stream
+        self.__frame = None
+
+    @property
+    def frame(self):
+        return self.__frame
+
+    def shutdown(self):
+        self.keep_running = False
+
+    def run(self):
+        while self.keep_running:
+            self.__frame = next(self.__stream)
 
 
 class Application:
     '''
     The main application.
 
-    It offers three entry-points:
-
-    * run: A simple delegate to the other "run_" methods. The correct method is
-        determined by inspecting the CLI arguments (or customised arguments
-        passed to :py:meth:`~.Application.init`).
-    * run_cli: Run the application on the CLI and start reading frames and
-        detect motion. This is usually the entry-point you want to run!
-    * run_gui: This will run a graphical UI which was originally implemented for
-        debugging and development.
-    * run_webui: A simple web-ui. Also implemented originally to offer a way to
-        access files stored in the application storage.
+    Use "run" to start it.
     '''
 
     def __init__(self):
@@ -62,8 +128,9 @@ class Application:
             storage = Storage.from_config(self.config)
             mask = self.config.get('detection', 'mask', default=None)
             pipeline = custom_pipeline or DefaultPipeline(mask, storage)
-            self.__stream = detect(self.frames, debug=self.__cli_args.debug,
-                                   detection_pipeline=pipeline)
+            stream = detect(self.frames, debug=self.__cli_args.debug,
+                            detection_pipeline=pipeline)
+            self.reader_thread = ReaderThread(stream)
             self.verbosity = self.__cli_args.verbosity
             self.initialised = True
             LOG.info('Application successfully initialised.')
@@ -89,6 +156,9 @@ class Application:
         self.__verbosity = value
         logger = logging.getLogger()
         logger.setLevel(max(0, logging.CRITICAL - (10 * value)))
+        if value > 0:
+            logging.getLogger('werkzeug').setLevel(logging.INFO)
+            colorize_werkzeug()
 
     def _get_framesource(self):
         '''
@@ -119,47 +189,47 @@ class Application:
 
     def run(self):
         '''
-        Parses CLI args and delegates to the appropriate UI.
-        '''
-        args = self.init()
-        if args.ui == 'cli':
-            self.run_cli()
-        elif args.ui == 'webui':
-            self.run_webui()
-        elif args.ui == 'gui':
-            self.run_gui()
-        else:
-            print("ui must be cli, webui or gui")
-
-    def run_gui(self):
-        '''
         Runs the application as a simple GUI.
         '''
-        for frame in self.__stream:
-            cv2.imshow('RaspiCam Main Window', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+        self.reader_thread.start()
+
+        webapp = make_app(self.reader_thread, self.config)
+        web_thread = WebThread(webapp)
+        web_thread.start()
+
+        if self.__cli_args.run_gui:
+            gui_thread = GuiThread(self.reader_thread)
+            gui_thread.start()
+
+        while True:
+            try:
+                sleep(0.1)
+            except KeyboardInterrupt:
+                LOG.info('Intercepted CTRL+C')
+                if self.__cli_args.run_gui:
+                    gui_thread.shutdown()
+                web_thread.shutdown()
+
+            if self.__cli_args.run_gui and not gui_thread.is_alive():
+                LOG.debug('GUI exited')
                 break
-        # When everything done, release the capture
-        # cap.release()
-        cv2.destroyAllWindows()
 
-    def run_webui(self):
-        '''
-        Starts a simple web interface. Frames will *not* be automatically be
-        read in this mode! If exists to offer a simple way to access stored
-        files.
+            if not web_thread.is_alive():
+                LOG.debug('Web server exited (possible call to /shutdown)')
+                break
 
-        It *can* be started alongside either the GUI or CLI mode.
-        '''
-        app = make_app(self.__stream, self.config)
-        app.run(host='0.0.0.0', debug=True, threaded=True)
+        web_thread.shutdown()
+        web_thread.join()
+        if self.__cli_args.run_gui:
+            gui_thread.join()
 
-    def run_cli(self):
-        '''
-        Runs the application in CLI mode.
-        '''
-        for _ in self.__stream:
-            pass
+        self.reader_thread.shutdown()
+        self.reader_thread.join()
+
+        LOG.debug('all finished')
+
+
+
 
 
 def parse_args(cli_args):
@@ -167,7 +237,8 @@ def parse_args(cli_args):
     Parse CLI arguments and return the parsed object.
     '''
     parser = ArgumentParser()
-    parser.add_argument('ui', help='Chose a UI. One of [gui, web, cli]')
+    parser.add_argument('-g', '--run-gui', help='Enable simple desktop GUI',
+                        default=False, action='store_true')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='Enable debug mode')
     parser.add_argument('-v', dest='verbosity', action='count', default=0,
@@ -189,6 +260,7 @@ def main():
         print('raspicam v%s' % raspicam.__version__)
         return 0
     app.run()
+    LOG.debug('exiting')
 
 
 if __name__ == '__main__':

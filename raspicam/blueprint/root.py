@@ -4,7 +4,7 @@ from os import listdir
 from os.path import abspath, isdir, join
 from time import sleep
 
-from flask import Blueprint, Response, current_app, render_template, send_file
+from flask import Blueprint, Response, current_app, render_template, send_file, request
 from raspicam.processing import as_jpeg
 
 ROOT = Blueprint('root', __name__)
@@ -24,7 +24,13 @@ def multipart_stream(frame_generator):
     :param frame_generator: A generater which generates image frames as *bytes* objects
     :return: A new, wrapped stream of bytes
     """
-    for output in frame_generator:
+    current_frame_id = id(frame_generator.frame)
+    while True:
+        while current_frame_id == id(frame_generator.frame):
+            # sleep as long as the frame has not changed in the thread
+            sleep(0.01)
+        output = frame_generator.frame
+        current_frame_id = id(output)
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n'
                b'\r\n' + as_jpeg(output) + b'\r\n'
@@ -41,9 +47,23 @@ def filereader():
             sleep(0.5)
 
 
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+
+@ROOT.route('/shutdown', methods=['POST'])
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
+
+
+@ROOT.route('/')
 @ROOT.route('/show_stream')
 def show_stream():
-    return render_template('index.html')
+    return render_template('show_stream.html')
 
 
 @ROOT.route('/file/<path:fname>')
@@ -68,11 +88,12 @@ def player(fname):
     return render_template('player.html', fname=fname)
 
 
-@ROOT.route('/')
 @ROOT.route('/files')
 @ROOT.route('/files/<path:path>')
 def files(path=''):
-    basedir = current_app.localconf.get('storage', 'root')
+    basedir = current_app.localconf.get('storage', 'root', default=None)
+    if not basedir:
+        return 'No storage defined in config!'
     sysdir = join(basedir, path)
     videos = []
     paths = []

@@ -12,6 +12,7 @@ setup(
         'gouge',
         'numpy',
         'pytesseract',
+        'blessings',
     ],
     requires=[
         'config_resolver',
@@ -19,6 +20,7 @@ setup(
         'gouge',
         'numpy',
         'pytesseract',
+        'blessings',
     ],
     entry_points={
         'console_scripts': [
