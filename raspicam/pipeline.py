@@ -9,6 +9,7 @@ For more details, see :py:class:`~.DetectionPipeline`
 import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
+from os.path import exists
 
 import cv2
 
@@ -149,6 +150,10 @@ def blur(pixels, label='blur'):
     return fun
 
 
+def no_op(frames, motion_regions):
+    return MutatorOutput([], motion_regions)
+
+
 def masker(mask_filename, label='mask'):
     '''
     Creates a new pipeline operation which applies a mask taken from
@@ -174,11 +179,16 @@ def masker(mask_filename, label='mask'):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames, motion_regions: MutatorOutput(
-            [InterFrame(frames[-1], label)],
-            motion_regions)
+        return no_op
+
+    if not exists(mask_filename):
+        LOG.warning('Mask %r not found! Ignoring...', mask_filename)
+        return no_op
 
     mask = cv2.imread(mask_filename, 0)
+    if not mask:
+        LOG.warning('Unable to load %r as mask! Ignoring...', mask_filename)
+        return no_op
 
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
