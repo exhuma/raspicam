@@ -151,6 +151,11 @@ def blur(pixels, label='blur'):
 
 
 def no_op(frames, motion_regions):
+    '''
+    An operation which does nothing at all.
+
+    This exists to simplify a couple of lines of code and replaces some lambdas.
+    '''
     return MutatorOutput([], motion_regions)
 
 
