@@ -92,7 +92,10 @@ class ReaderThread(Thread):
 
     def run(self):
         while self.keep_running:
-            self.__frame = next(self.__stream)
+            try:
+                self.__frame = next(self.__stream)
+            except StopIteration:
+                break
 
 
 class Application:
