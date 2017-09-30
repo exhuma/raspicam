@@ -23,6 +23,45 @@ MutatorOutput = namedtuple(
     'MutatorOutput', 'intermediate_frames motion_regions')
 
 
+def pusher(app_id, key, secret, cluster='eu', ssl=True):
+    '''
+    Sends an event to pusher if motion is detected.
+    
+    To do this you must register with https://www.pusher.com and retrieve the
+    required arguments listed below.
+    
+    :param app_id:  The pusher app-id
+    :param key:  The pusher key
+    :param secret:  The pusher secret
+    :param cluster:  The pusher cluster
+    :param ssl:  Wether to use SSL or not
+    :return: A pipeline operator sending events to pusher
+    '''
+    import pusher
+    pusher_client = pusher.Pusher(
+        app_id=app_id,
+        key=key,
+        secret=secret,
+        cluster=cluster,
+        ssl=ssl
+    )
+    state = {'last_event': datetime(1970, 1, 1)}
+
+    def send_event(frames, motion_regions):
+        last_event = state['last_event']
+        time_since_last_event = datetime.now() - last_event
+        if time_since_last_event.total_seconds() > 10:
+            pusher_client.trigger(
+                'motion-events',
+                'motion-detected', {
+                    'message': 'Motion detected in %d regions.' % len(
+                        motion_regions)
+                })
+            state['last_event'] = datetime.now()
+        return MutatorOutput([], motion_regions)
+    return send_event
+
+
 def text_adder(frames, motion_regions):
     '''
     Pipeline operation which adds a default header and footer to a frame.

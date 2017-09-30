@@ -9,6 +9,7 @@
         border: 1px solid white;
       }
     </style>
+    <script src="https://js.pusher.com/4.1/pusher.min.js"></script>
   </head>
   <body>
     <img id="bg" src="{{ url_for('root.video_feed') }}">
@@ -16,5 +17,20 @@
     <form action="/shutdown" method="POST">
       <input type="submit" value="Shutdown Server"/>
     </form>
+    <script>
+       // Enable pusher logging - don't include this in production
+      Pusher.logToConsole = true;
+
+      var pusher = new Pusher('d6afe324eb34fd033a12', {
+        cluster: 'eu',
+        encrypted: true
+      });
+
+      var channel = pusher.subscribe('motion-events');
+      var audio = new Audio('{{url_for('static', filename='thrown.mp3')}}');
+      channel.bind('motion-detected', function(data) {
+        audio.play();
+      });
+    </script>
   </body>
 </html>
