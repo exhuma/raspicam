@@ -21,12 +21,14 @@ aptitude install -y \
     libavcodec-dev \
     libavformat-dev \
     libdc1394-22-dev \
+    libffi-dev \
     libgtk2.0-dev \
     libjasper-dev \
     libjpeg-dev \
     libjpeg-dev \
     libpng-dev \
     libpng12-dev \
+    libssl-dev \
     libswscale-dev \
     libtbb-dev \
     libtbb2 \
