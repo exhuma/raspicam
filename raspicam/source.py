@@ -16,7 +16,11 @@ class Source(metaclass=ABCMeta):
 
     This is called "Camera" for historic reasons, and this will be refactored in
     the near future.
+
     '''
+
+    def __init__(self):
+        self.source = None
 
     @abstractmethod
     def frame_generator(self):
@@ -33,18 +37,24 @@ class FileReader(Source):
     :param filename: The name of the video file.
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, frame_callback=None):
         self.filename = filename
+        self.frame_callback = frame_callback
+        self.total_frames = 0
+
+    def init(self):
+        self.source = cv2.VideoCapture(self.filename)
+        self.total_frames = self.source.get(cv2.CAP_PROP_FRAME_COUNT)
 
     def frame_generator(self):
         '''
         Returns a generator of video frames
         '''
-        video = cv2.VideoCapture(self.filename)
-        if not video.isOpened():
+        self.init()
+        if not self.source.isOpened():
             raise Exception('Unable to open %s' % self.filename)
         while True:
-            success, image = video.read()
+            success, image = self.source.read()
             if not success:
                 LOG.info('Unable to read frame from %s. Might have reached '
                          'end of file!', self.filename)

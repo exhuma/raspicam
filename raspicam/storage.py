@@ -193,7 +193,6 @@ class DiskStorage(Storage):
         LOG.info('Snapshot written to %s', filename)
 
 
-
 class NullStorage(Storage):
     '''
     Simply logs calls, but does not really store anything.

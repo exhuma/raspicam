@@ -240,7 +240,9 @@ class MotionDetector:
     :param label: The label for this operation.
     '''
 
-    def __init__(self, label='MotionDetector'):
+    def __init__(self, label='MotionDetector', config=None):
+        config = config or {}
+        self.contour_size_threshold = config.get('contour_size_threshold', 30)
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
         self.label = label
 
@@ -253,7 +255,8 @@ class MotionDetector:
             without_shadows,
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
-        contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
+        contours = [cnt for cnt in contours
+                    if cv2.contourArea(cnt) > self.contour_size_threshold]
         return MutatorOutput([
             InterFrame(fgmask, '%s - w/ shadows' % self.label),
             InterFrame(without_shadows, '%s - no shadows' % self.label),
