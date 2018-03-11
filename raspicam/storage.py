@@ -19,12 +19,46 @@ from collections import deque
 from datetime import datetime
 from os import getcwd, makedirs
 from os.path import exists, join
+from threading import Thread
 
 import cv2
 
 from raspicam.localtypes import Dimension
 
 LOG = logging.getLogger(__name__)
+
+
+class DiskWriterThread(Thread):
+
+    def __init__(self, filename, fourcc, format, dimension, *sources):
+        super().__init__()
+        self.filename = filename
+        self.fourcc = fourcc
+        self.format = format
+        self.dimension = dimension
+        self.sources = sources
+
+    def run(self):
+        if exists(self.filename):
+            LOG.error('Video file %r already exists. Not storing current video!',
+                      self.filename)
+            return
+        lookbehind, lookahead = self.sources
+        LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',
+                 len(lookbehind), len(lookahead))
+        writer = cv2.VideoWriter(
+            self.filename,
+            cv2.VideoWriter_fourcc(*self.fourcc),
+            10.0,
+            (self.dimension.width, self.dimension.height),
+            True)
+        # lookahead is full. Write result to disk
+        for stored_frame in lookbehind:
+            writer.write(stored_frame)
+        for stored_frame in lookahead:
+            writer.write(stored_frame)
+        writer.release()
+        LOG.info('Video written to %r (codec=%s)', self.filename, self.format)
 
 
 class Storage(metaclass=ABCMeta):
@@ -154,23 +188,16 @@ class DiskStorage(Storage):
                       self.video_length)
             self.lookahead.append(frame)
         if len(self.lookahead) == self.lookahead.maxlen:
-            LOG.info('Dumping video cache (%d lookbehind, %d lookahead)',
-                     len(self.lookbehind), len(self.lookahead))
-            writer = cv2.VideoWriter(
+            diskwriter = DiskWriterThread(
                 absname,
-                cv2.VideoWriter_fourcc(*self.fourcc),
-                10.0,
-                (self.dimension.width, self.dimension.height),
-                True)
-            # lookahead is full. Write result to disk
-            for stored_frame in self.lookbehind:
-                writer.write(stored_frame)
-            for stored_frame in self.lookahead:
-                writer.write(stored_frame)
-            writer.release()
+                self.fourcc,
+                self.format,
+                self.dimension,
+                self.lookbehind.copy(),
+                self.lookahead.copy())
             self.lookbehind.clear()
             self.lookahead.clear()
-            LOG.info('Video written to %r (codec=%s)', absname, self.format)
+            diskwriter.start()
             return True
         return False
 
