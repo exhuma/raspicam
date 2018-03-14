@@ -255,7 +255,7 @@ class Application:
             self.reader_thread.shutdown()
             self.reader_thread.join()
 
-        LOG.debug('all finished')
+        LOG.info('all finished')
 
 
 
