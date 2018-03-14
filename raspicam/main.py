@@ -233,6 +233,7 @@ class Application:
                 if self.run_gui:
                     gui_thread.shutdown()
                 web_thread.shutdown()
+                self.reader_thread.shutdown()
 
             if self.run_gui and not gui_thread.is_alive():
                 LOG.debug('GUI exited')
