@@ -47,6 +47,7 @@ def pusher(app_id, key, secret, cluster='eu', ssl=True):
         ssl=ssl
     )
     state = {'last_event': datetime(1970, 1, 1)}
+    pusher_client.trigger('rpi-cam-state', 'pipeline-connected', {'message': 'raspicam started up'})
 
     def send_event(frames, motion_regions):
         if not motion_regions:
