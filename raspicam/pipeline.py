@@ -234,7 +234,7 @@ def masker(mask_filename, label='mask'):
         return no_op
 
     mask = cv2.imread(mask_filename, 0)
-    if not mask:
+    if mask is None:
         LOG.warning('Unable to load %r as mask! Ignoring...', mask_filename)
         return no_op
 
@@ -248,7 +248,7 @@ def masker(mask_filename, label='mask'):
             return MutatorOutput([InterFrame(frame, label)],
                                  motion_regions)
 
-        if not mask:
+        if mask is None:
             return MutatorOutput([], motion_regions)
 
         if frame.shape != mask.shape:

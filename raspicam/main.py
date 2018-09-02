@@ -180,7 +180,7 @@ class Application:
         self.run_gui = args.run_gui
         self.init_scripted(frame_source, args.debug, args.verbosity, storage,
                            mask, pusher_client=pusher_client)
-        return self.__cli_args
+        return args
 
     @property
     def verbosity(self):
