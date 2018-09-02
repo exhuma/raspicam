@@ -46,6 +46,7 @@ def pusher(app_id, key, secret, cluster='eu', ssl=True):
         cluster=cluster,
         ssl=ssl
     )
+    LOG.info('Connected pusher via %r', pusher_client)
     state = {'last_event': datetime(1970, 1, 1)}
     pusher_client.trigger('rpi-cam-state', 'pipeline-connected', {'message': 'raspicam started up'})
 
@@ -301,6 +302,8 @@ class MotionDetector:
             cv2.CHAIN_APPROX_SIMPLE)
         contours = [cnt for cnt in contours
                     if cv2.contourArea(cnt) > self.contour_size_threshold]
+        if contours:
+            LOG.info('Motion detected in %d regions', len(contours))
         return MutatorOutput([
             InterFrame(fgmask, '%s - w/ shadows' % self.label),
             InterFrame(without_shadows, '%s - no shadows' % self.label),
