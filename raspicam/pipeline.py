@@ -9,6 +9,7 @@ For more details, see :py:class:`~.DetectionPipeline`
 import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
+from os.path import exists
 
 import cv2
 
@@ -188,6 +189,15 @@ def blur(pixels, label='blur'):
     return fun
 
 
+def no_op(frames, motion_regions):
+    '''
+    An operation which does nothing at all.
+
+    This exists to simplify a couple of lines of code and replaces some lambdas.
+    '''
+    return MutatorOutput([], motion_regions)
+
+
 def masker(mask_filename, label='mask'):
     '''
     Creates a new pipeline operation which applies a mask taken from
@@ -213,11 +223,16 @@ def masker(mask_filename, label='mask'):
 
     LOG.debug('Setting mask to %s', mask_filename)
     if not mask_filename:
-        return lambda frames, motion_regions: MutatorOutput(
-            [InterFrame(frames[-1], label)],
-            motion_regions)
+        return no_op
+
+    if not exists(mask_filename):
+        LOG.warning('Mask %r not found! Ignoring...', mask_filename)
+        return no_op
 
     mask = cv2.imread(mask_filename, 0)
+    if not mask:
+        LOG.warning('Unable to load %r as mask! Ignoring...', mask_filename)
+        return no_op
 
     def fun(frames, motion_regions):
         # pylint: disable=missing-docstring
@@ -228,6 +243,9 @@ def masker(mask_filename, label='mask'):
                         'Convert to B/W first!')
             return MutatorOutput([InterFrame(frame, label)],
                                  motion_regions)
+
+        if not mask:
+            return MutatorOutput([], motion_regions)
 
         if frame.shape != mask.shape:
             LOG.warning('Mask has differend dimensions than the processed '
@@ -261,7 +279,9 @@ class MotionDetector:
     :param label: The label for this operation.
     '''
 
-    def __init__(self, label='MotionDetector'):
+    def __init__(self, label='MotionDetector', config=None):
+        config = config or {}
+        self.contour_size_threshold = config.get('contour_size_threshold', 30)
         self.fgbg = cv2.createBackgroundSubtractorMOG2()
         self.label = label
 
@@ -274,21 +294,20 @@ class MotionDetector:
             without_shadows,
             cv2.RETR_EXTERNAL,
             cv2.CHAIN_APPROX_SIMPLE)
-        contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 30]
+        contours = [cnt for cnt in contours
+                    if cv2.contourArea(cnt) > self.contour_size_threshold]
         return MutatorOutput([
             InterFrame(fgmask, '%s - w/ shadows' % self.label),
             InterFrame(without_shadows, '%s - no shadows' % self.label),
         ], contours)
 
 
-def file_extractor(filename, label='file_extractor'):
+def file_extractor(filename):
     '''
     Creates a new pipeline operation which simply writes the current frame out
     to the specified *filename*. No modification is done.
 
     If the file already exists, it will be overwritten.
-
-    :param label: The label of this operation
     '''
     def extract(frames, motion_regions):
         # pylint: disable=missing-docstring

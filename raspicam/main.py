@@ -16,11 +16,22 @@ import raspicam
 from raspicam.pipeline import DefaultPipeline
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
-from raspicam.storage import NullStorage, Storage
+from raspicam.storage import Storage
 from raspicam.web.colorize import colorize_werkzeug
 from raspicam.webui import make_app
 
 LOG = logging.getLogger(__name__)
+
+
+class NullWeb:
+    def shutdown(self):
+        pass
+
+    def join(self):
+        pass
+
+    def is_alive(self):
+        return False
 
 
 class GuiThread(Thread):
@@ -92,13 +103,16 @@ class ReaderThread(Thread):
 
     def run(self):
         while self.keep_running:
-            self.__frame = next(self.__stream)
+            try:
+                self.__frame = next(self.__stream)
+            except StopIteration:
+                break
 
 
 class Application:
     '''
     The main application.
-    
+
     Use "run" to start it.
     '''
 
@@ -106,11 +120,26 @@ class Application:
         self.config = None
         self.initialised = False
         self.frames = iter([])
-        self.__cli_args = None
+        self.run_web = False
+        self.run_gui = False
         self.__verbosity = 0
         self.__stream = []
 
-    def init(self, cli_args=None, custom_pipeline=None):
+    def init_scripted(self, frame_source, debug, verbosity, storage=None,
+                      mask=None, custom_pipeline=None):
+        if not self.initialised:
+            self.frames = frame_source
+            pipeline = custom_pipeline or DefaultPipeline(mask, storage)
+            stream = detect(self.frames, debug=debug,
+                            detection_pipeline=pipeline)
+            self.reader_thread = ReaderThread(stream)
+            self.verbosity = verbosity
+            self.initialised = True
+            LOG.info('Application successfully initialised.')
+        else:
+            LOG.debug('Appliation is already initialised. Skipping init!')
+
+    def init(self, cli_args=None):
         '''
         Initialises the application and parses CLI arguments.
 
@@ -121,21 +150,17 @@ class Application:
             used.
         '''
         cli_args = cli_args or sys.argv[1:]
-        if not self.initialised:
-            self.__cli_args = parse_args(cli_args)
-            self.config = Config('exhuma', 'raspicam', require_load=True)
-            self.frames = self._get_framesource()
-            storage = Storage.from_config(self.config)
-            mask = self.config.get('detection', 'mask', default=None)
-            pipeline = custom_pipeline or DefaultPipeline(mask, storage)
-            stream = detect(self.frames, debug=self.__cli_args.debug,
-                            detection_pipeline=pipeline)
-            self.reader_thread = ReaderThread(stream)
-            self.verbosity = self.__cli_args.verbosity
-            self.initialised = True
-            LOG.info('Application successfully initialised.')
-        else:
-            LOG.debug('Appliation is already initialised. Skipping init!')
+        args = parse_args(cli_args)
+        self.config = Config('exhuma', 'raspicam', require_load=True)
+        kind = self.config.get('framesource', 'kind').lower()
+        raw_arguments = self.config.get('framesource', 'arguments', default='')
+        frame_source = self._get_framesource(kind, raw_arguments)
+        storage = Storage.from_config(self.config)
+        mask = self.config.get('detection', 'mask', default=None)
+        self.run_web = args.run_web
+        self.run_gui = args.run_gui
+        self.init_scripted(frame_source, args.debug, args.verbosity, storage,
+                           mask)
         return self.__cli_args
 
     @property
@@ -160,15 +185,13 @@ class Application:
             logging.getLogger('werkzeug').setLevel(logging.INFO)
             colorize_werkzeug()
 
-    def _get_framesource(self):
+    def _get_framesource(self, kind, raw_arguments):
         '''
         Parsed the frame source from the config and returns an appropriate
         generator.
 
         The returned genereator will return a new video frame on each iteration.
         '''
-        kind = self.config.get('framesource', 'kind').lower()
-        raw_arguments = self.config.get('framesource', 'arguments', default='')
         if raw_arguments.strip():
             arguments = [arg.strip() for arg in raw_arguments.split(',')]
         else:
@@ -178,26 +201,27 @@ class Application:
                 index = int(arguments[0])
             else:
                 index = -1
-            return USBCam(index).frame_generator()
+            self.source = USBCam(index)
         elif kind == 'raspberrypi':
-            return PiCamera().frame_generator()
+            self.source = PiCamera()
         elif kind == 'file':
             filename = arguments[0]
-            return FileReader(filename).frame_generator()
+            self.source = FileReader(filename)
         else:
             raise ValueError('%s is an unsupported frame source!')
+        return self.source.frame_generator()
 
     def run(self):
-        '''
-        Runs the application as a simple GUI.
-        '''
         self.reader_thread.start()
 
-        webapp = make_app(self.reader_thread, self.config)
-        web_thread = WebThread(webapp)
-        web_thread.start()
+        if self.run_web:
+            webapp = make_app(self.reader_thread, self.config)
+            web_thread = WebThread(webapp)
+            web_thread.start()
+        else:
+            web_thread = NullWeb()
 
-        if self.__cli_args.run_gui:
+        if self.run_gui:
             gui_thread = GuiThread(self.reader_thread)
             gui_thread.start()
 
@@ -206,27 +230,32 @@ class Application:
                 sleep(0.1)
             except KeyboardInterrupt:
                 LOG.info('Intercepted CTRL+C')
-                if self.__cli_args.run_gui:
+                if self.run_gui:
                     gui_thread.shutdown()
                 web_thread.shutdown()
+                self.reader_thread.shutdown()
 
-            if self.__cli_args.run_gui and not gui_thread.is_alive():
+            if self.run_gui and not gui_thread.is_alive():
                 LOG.debug('GUI exited')
                 break
 
-            if not web_thread.is_alive():
+            if not isinstance(web_thread, NullWeb) and not web_thread.is_alive():
                 LOG.debug('Web server exited (possible call to /shutdown)')
+                break
+            elif isinstance(web_thread, NullWeb) and not self.reader_thread.is_alive():
+                LOG.debug('Reader server exited.')
                 break
 
         web_thread.shutdown()
         web_thread.join()
-        if self.__cli_args.run_gui:
+        if self.run_gui:
             gui_thread.join()
 
-        self.reader_thread.shutdown()
-        self.reader_thread.join()
+        if self.reader_thread.is_alive():
+            self.reader_thread.shutdown()
+            self.reader_thread.join()
 
-        LOG.debug('all finished')
+        LOG.info('all finished')
 
 
 
@@ -238,6 +267,8 @@ def parse_args(cli_args):
     '''
     parser = ArgumentParser()
     parser.add_argument('-g', '--run-gui', help='Enable simple desktop GUI',
+                        default=False, action='store_true')
+    parser.add_argument('-w', '--run-web', help='Enable simple web UI',
                         default=False, action='store_true')
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help='Enable debug mode')
