@@ -67,4 +67,5 @@ How to setup
 6. Run the application::
 
         cd ~/raspicam
-        python3 project/main.py
+        python3 project/main.py --help
+        python3 project/main.py -vvv -w  # with simple WebUI
