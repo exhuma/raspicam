@@ -1,0 +1,29 @@
+<template>
+  <div class="mini-log">
+    <h1>Log</h1>
+    <p v-for="item in items.slice(-3)" :key="item.id">{{item}}</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'MiniLog',
+  data () {
+    return {
+      index: 0
+    }
+  },
+  props: {
+    items: Array
+  },
+  methods: {
+    pushItem (item) {
+      this.items.push({
+        id: this.index + 1,
+        payload: item
+      })
+      this.index += 1
+    }
+  }
+}
+</script>
