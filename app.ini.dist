@@ -24,7 +24,6 @@ kind = usb
 ; lookup.
 arguments = 1
 
-
 ;
 ; Options for the detection step
 ;
@@ -33,3 +32,11 @@ arguments = 1
 ; Apply a mask. This should be a black/white image. Everything black is masked,
 ; white will be processed.
 mask = /path/to/mask
+
+
+; Pusher settings.
+; If left undefined, pusher support is disabled.
+; [pusher]
+; app_id = 12345
+; key = abcdef1234
+; secret = abcdef1234
