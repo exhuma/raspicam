@@ -49,9 +49,13 @@ def pusher(app_id, key, secret, cluster='eu', ssl=True):
     state = {'last_event': datetime(1970, 1, 1)}
 
     def send_event(frames, motion_regions):
+        if not motion_regions:
+            return MutatorOutput([], motion_regions)
+
         last_event = state['last_event']
         time_since_last_event = datetime.now() - last_event
         if time_since_last_event.total_seconds() > 10:
+            LOG.info('Sending event to pusher %r', pusher_client)
             pusher_client.trigger(
                 'motion-events',
                 'motion-detected', {

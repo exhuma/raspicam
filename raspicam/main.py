@@ -13,7 +13,7 @@ from time import sleep
 from config_resolver import Config
 
 import raspicam
-from raspicam.pipeline import DefaultPipeline
+from raspicam.pipeline import DefaultPipeline, pusher
 from raspicam.processing import detect
 from raspicam.source import PiCamera, USBCam, FileReader
 from raspicam.storage import Storage
@@ -126,10 +126,15 @@ class Application:
         self.__stream = []
 
     def init_scripted(self, frame_source, debug, verbosity, storage=None,
-                      mask=None, custom_pipeline=None):
+                      mask=None, custom_pipeline=None, pusher_client=None):
         if not self.initialised:
             self.frames = frame_source
             pipeline = custom_pipeline or DefaultPipeline(mask, storage)
+
+            if pusher_client:
+                pipeline.operations.insert(5, pusher_client)
+                LOG.info('Pusher client inserted into pipelint at position #5')
+
             stream = detect(self.frames, debug=debug,
                             detection_pipeline=pipeline)
             self.reader_thread = ReaderThread(stream)
@@ -157,10 +162,24 @@ class Application:
         frame_source = self._get_framesource(kind, raw_arguments)
         storage = Storage.from_config(self.config)
         mask = self.config.get('detection', 'mask', default=None)
+
+        pusher_app_id = self.config.get('pusher', 'app_id')
+        if pusher_app_id:
+            pusher_client = pusher(
+                app_id=pusher_app_id,
+                key=self.config.get('pusher', 'key'),
+                secret=self.config.get('pusher', 'secret'),
+                cluster=self.config.get('pusher', 'cluster', default='eu'),
+                ssl=self.config.get('pusher', 'ssl', default='True')[0].lower() in ('y1t')
+            )
+            LOG.info('Pusher client created: %r', pusher_client)
+        else:
+            pusher_client = None
+
         self.run_web = args.run_web
         self.run_gui = args.run_gui
         self.init_scripted(frame_source, args.debug, args.verbosity, storage,
-                           mask)
+                           mask, pusher_client=pusher_client)
         return self.__cli_args
 
     @property
