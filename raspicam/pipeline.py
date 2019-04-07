@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from os.path import exists
 
 import cv2
+from requests.exceptions import ConnectionError
 
 import numpy as np
 from raspicam.localtypes import Dimension
@@ -58,13 +59,16 @@ def pusher(app_id, key, secret, cluster='eu', ssl=True):
         time_since_last_event = datetime.now() - last_event
         if time_since_last_event.total_seconds() > 10:
             LOG.info('Sending event to pusher %r', pusher_client)
-            pusher_client.trigger(
-                'motion-events',
-                'motion-detected', {
-                    'message': 'Motion detected in %d regions.' % len(
-                        motion_regions)
-                })
-            state['last_event'] = datetime.now()
+            try:
+                pusher_client.trigger(
+                    'motion-events',
+                    'motion-detected', {
+                        'message': 'Motion detected in %d regions.' % len(
+                            motion_regions)
+                    })
+                state['last_event'] = datetime.now()
+            except ConnectionError:
+                LOG.debug('Error sending event to pusher', exc_info=True)
         return MutatorOutput([], motion_regions)
     return send_event
 
