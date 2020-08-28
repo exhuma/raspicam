@@ -144,7 +144,7 @@ class Application:
         else:
             LOG.debug('Appliation is already initialised. Skipping init!')
 
-    def init(self, cli_args=None):
+    def init(self, cli_args=None, custom_pipeline=None):
         '''
         Initialises the application and parses CLI arguments.
 
@@ -179,7 +179,7 @@ class Application:
         self.run_web = args.run_web
         self.run_gui = args.run_gui
         self.init_scripted(frame_source, args.debug, args.verbosity, storage,
-                           mask, pusher_client=pusher_client)
+                           mask, pusher_client=pusher_client, custom_pipeline=custom_pipeline)
         return args
 
     @property
