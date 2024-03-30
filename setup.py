@@ -7,7 +7,7 @@ setup(
     version=version,
     packages=find_packages(),
     install_requires=[
-        'config_resolver',
+        'config_resolver<5.0',
         'flask',
         'gouge',
         'numpy',
@@ -15,7 +15,7 @@ setup(
         'blessings',
     ],
     requires=[
-        'config_resolver',
+        'config_resolver<5.0',
         'flask',
         'gouge',
         'numpy',
